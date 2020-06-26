@@ -1,0 +1,30 @@
+[package]
+name = "the_process_foundry"
+version = "0.1.0"
+authors = ["Dave Fogelson <dfogelson@fishheadlabs.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# General logging
+log = "0.4.8"
+env_logger = "0.7.1"
+
+# Error creation
+anyhow = "1.0.31"
+thiserror = "1.0.20"
+
+# For the config parsing
+serde = "1.0.114"
+serde_derive = "1.0.114"
+serde_yaml = "0.8.13"
+
+# Semantic Versioning
+semver = { version = "0.10.0", features = ["serde"] }
+
+# "Export Json Schemas"
+schemars = "0.8.0-alpha-4"
+
+# Unique IDs
+uuid = { version = "0.8.1", features = ["v4", "serde"] }
