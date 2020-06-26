@@ -5,21 +5,21 @@
 use anyhow::Result;
 use error::FoundryError;
 
+pub mod applications;
 pub mod error;
 pub mod registry;
 
-use registry::Registry;
-
-pub fn create_registry() -> Result<Registry> {
-    unimplemented!("No Create for you")
-}
+use registry::*;
 
 pub fn bootstrap() -> Result<()> {
     // Bootstrap
     // - Create Registry
-    let registry = create_registry()?;
+    let mut registry = Registry::new();
+    log::debug!("The registry has been created:\n{}", registry);
 
     // - Load the core Apps
+    registry.register_factory(Box::new(applications::BashFactory::new()))?;
+
     // - Get the local shell from foundry - default user shell, fallback bash
     // - Get docker-compose app from foundry
     // - Get docker-compose container from compose app
@@ -31,4 +31,8 @@ pub fn bootstrap() -> Result<()> {
 fn main() {
     env_logger::init();
     log::info!("Starting to run the Process foundry");
+    log::info!(
+        "Finished bootstrapping the foundry with a result of:\n{:#?}",
+        bootstrap()
+    )
 }
