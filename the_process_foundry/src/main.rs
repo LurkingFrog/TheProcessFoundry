@@ -19,6 +19,7 @@ pub fn bootstrap() -> Result<()> {
 
     // - Load the core Apps
     registry.register_factory(Box::new(applications::BashFactory::new()))?;
+    log::debug!("I've registered Bash:\n{}", registry);
 
     // - Get the local shell from foundry - default user shell, fallback bash
     // - Get docker-compose app from foundry
@@ -31,8 +32,6 @@ pub fn bootstrap() -> Result<()> {
 fn main() {
     env_logger::init();
     log::info!("Starting to run the Process foundry");
-    log::info!(
-        "Finished bootstrapping the foundry with a result of:\n{:#?}",
-        bootstrap()
-    )
+    let _ = bootstrap();
+    log::info!("Finished bootstrapping the foundry")
 }

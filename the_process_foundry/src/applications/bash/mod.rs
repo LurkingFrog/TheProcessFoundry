@@ -2,6 +2,9 @@
 //!
 //! This is essentially my hello world application and using it as a stalking horse for finding user stories
 
+const APP_NAME: &str = "Bash";
+const MODULE_VERSION: &'static str = env!("CARGO_PKG_VERSION");
+
 use anyhow::{Context, Result};
 use std::process::Command;
 
@@ -18,7 +21,7 @@ pub struct Bash {
 impl AppTrait for Bash {
   fn get_name(&self) -> String {
     match &self.version {
-      Some(ver) => format!("Bash (v{})", ver),
+      Some(ver) => format!("{} ({})", APP_NAME, ver),
       None => "Bash (Unknown Version)".to_string(),
     }
   }
@@ -33,8 +36,15 @@ impl BashFactory {
 }
 
 impl FactoryTrait for BashFactory {
-  fn get_definition(&self) -> AppDefinition {
-    unimplemented!("")
+  fn get_definition(&self) -> Result<AppDefinition> {
+    let version = {
+      let x = env!("CARGO_PKG_VERSION");
+      semver::Version::parse(x).context(format!(
+        "{} has an invalid version number '{}' Cargo.toml",
+        APP_NAME, x
+      ))
+    }?;
+    Ok(AppDefinition::new(APP_NAME.to_string(), version))
   }
   fn build(&self) -> Result<Box<dyn AppTrait>> {
     unimplemented!("")
@@ -64,7 +74,7 @@ pub struct RunOptions {}
 
 impl ActionTrait for FindAppOptions {
   type RESPONSE = ActionResult;
-  /// Find the first app that matches the conditions of AppDefinition (name, version, path, etc)
+  /// Find the first app that matches the conditions of AppDefinition (name, version,  path, etc)
   fn run(
     &self,
     container: Box<dyn AppTrait>,

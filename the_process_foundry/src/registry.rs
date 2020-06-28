@@ -1,7 +1,7 @@
 //! The lookup registry for the Rust Objects doing the work
 //!
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -39,8 +39,18 @@ impl Registry {
   }
 
   // /// Add a AppFactory definition as available to the Process Foundry
-  pub fn register_factory(&mut self, app: Box<dyn FactoryTrait>) -> Result<(), FoundryError> {
-    unimplemented!("Cannot register factories yet")
+  pub fn register_factory(&mut self, app: Box<dyn FactoryTrait>) -> Result<()> {
+    let def = app.get_definition()?;
+    log::info!("Registering new factory: {}", def.full_name());
+    // Collision if already exists
+    match self.factories.get(&def.full_name()) {
+      Some(_) => Err(FoundryError::DuplicateKeyError).context(format!(
+        "An application named '{}' has already been registered",
+        def.full_name()
+      ))?,
+      None => self.factories.insert(def.full_name(), app),
+    };
+    Ok(())
   }
 }
 
@@ -48,7 +58,7 @@ impl Registry {
 /// API of the App. While this allows us to scale horizontally, access using a direct import
 /// will benchmark faster.
 pub trait FactoryTrait {
-  fn get_definition(&self) -> AppDefinition;
+  fn get_definition(&self) -> Result<AppDefinition>;
   fn build(&self) -> Result<Box<dyn AppTrait>>;
 }
 
@@ -63,25 +73,35 @@ pub enum ActsAs {
   Either,
 }
 
+impl Default for ActsAs {
+  fn default() -> Self {
+    ActsAs::Either
+  }
+}
+
 /// This defines the version of container/application management code.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppDefinition {
   pub name: String,
+  pub module_version: semver::Version,
   pub acts_as: ActsAs,
-  pub app_version: Option<semver::Version>,
   pub works_with: Option<semver::VersionReq>,
   pub aliases: Option<Vec<String>>,
 }
 
 impl AppDefinition {
-  pub fn new(name: String) -> AppDefinition {
+  pub fn new(name: String, version: semver::Version) -> AppDefinition {
     AppDefinition {
       name,
       acts_as: ActsAs::Either,
-      app_version: None,
+      module_version: version,
       works_with: None,
       aliases: None,
     }
+  }
+
+  pub fn full_name(&self) -> String {
+    format!("{} ({})", self.name, self.module_version)
   }
 }
 
