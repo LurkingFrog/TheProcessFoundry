@@ -38,19 +38,29 @@ impl Registry {
     Default::default()
   }
 
-  // /// Add a AppFactory definition as available to the Process Foundry
+  /// Add a AppFactory definition as available to the Process Foundry
+  /// TODO: Either create a better key than just name or add lookup elements to the registry (likely both)
   pub fn register_factory(&mut self, app: Box<dyn FactoryTrait>) -> Result<()> {
     let def = app.get_definition()?;
     log::info!("Registering new factory: {}", def.full_name());
     // Collision if already exists
-    match self.factories.get(&def.full_name()) {
+    match self.factories.get(&def.name) {
       Some(_) => Err(FoundryError::DuplicateKeyError).context(format!(
         "An application named '{}' has already been registered",
         def.full_name()
       ))?,
-      None => self.factories.insert(def.full_name(), app),
+      None => self.factories.insert(def.name.clone(), app),
     };
     Ok(())
+  }
+
+  /// Find all the applications avaliable that match the given definition
+  /// TODO: this needs to be much more granular than just name
+  pub fn find(&self, def: &AppDefinition) -> Result<Vec<&Box<dyn FactoryTrait>>> {
+    match self.factories.get(&def.name) {
+      Some(factory) => Ok(vec![factory.clone()]),
+      None => Ok(vec![]),
+    }
   }
 }
 
@@ -79,11 +89,12 @@ impl Default for ActsAs {
   }
 }
 
-/// This defines the version of container/application management code.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// This defines the version of container/application management code as well as used for searching the
+/// registry
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct AppDefinition {
   pub name: String,
-  pub module_version: semver::Version,
+  pub module_version: Option<semver::Version>,
   pub acts_as: ActsAs,
   pub works_with: Option<semver::VersionReq>,
   pub aliases: Option<Vec<String>>,
@@ -94,14 +105,17 @@ impl AppDefinition {
     AppDefinition {
       name,
       acts_as: ActsAs::Either,
-      module_version: version,
+      module_version: Some(version),
       works_with: None,
       aliases: None,
     }
   }
 
   pub fn full_name(&self) -> String {
-    format!("{} ({})", self.name, self.module_version)
+    match &self.module_version {
+      Some(ver) => format!("{} ({})", self.name, ver),
+      None => format!("{} ({})", self.name, "Unknown Version"),
+    }
   }
 }
 
@@ -132,6 +146,8 @@ pub struct AppInstance {
 /// The interface for running actions on an application
 pub trait AppTrait {
   fn get_name(&self) -> String;
+  // fn find(&self, definition: AppDefinition) -> Result<AppInstance>;
+  // fn act(&self, action: Box<dyn ActionTrait>) -> Result<()>;
 }
 
 pub trait ContainerTrait {}

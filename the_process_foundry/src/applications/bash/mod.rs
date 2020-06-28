@@ -38,10 +38,9 @@ impl BashFactory {
 impl FactoryTrait for BashFactory {
   fn get_definition(&self) -> Result<AppDefinition> {
     let version = {
-      let x = env!("CARGO_PKG_VERSION");
-      semver::Version::parse(x).context(format!(
+      semver::Version::parse(MODULE_VERSION).context(format!(
         "{} has an invalid version number '{}' Cargo.toml",
-        APP_NAME, x
+        APP_NAME, MODULE_VERSION
       ))
     }?;
     Ok(AppDefinition::new(APP_NAME.to_string(), version))

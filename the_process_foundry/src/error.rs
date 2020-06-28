@@ -9,10 +9,16 @@ use thiserror::Error;
 pub enum FoundryError {
   #[error("There was an error attempting to convert from one type to another")]
   ConversionError,
+
   #[error("This item's key is already in use")]
   DuplicateKeyError,
+
+  #[error("Received multiple instances when looking for a single unique response")]
+  MultipleMatches,
+
   #[error("The item you were looking for was not found")]
   NotFound,
+
   #[error("We received an error that was not explicitly handled")]
   UnhandledError,
 }
