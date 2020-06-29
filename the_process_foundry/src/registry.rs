@@ -69,7 +69,9 @@ impl Registry {
 /// will benchmark faster.
 pub trait FactoryTrait {
   fn get_definition(&self) -> Result<AppDefinition>;
-  fn build(&self) -> Result<Box<dyn AppTrait>>;
+
+  /// Construct an instance of the app module based on the container it is in
+  fn build(&self, container: Option<Box<dyn AppTrait>>) -> Result<Box<dyn AppTrait>>;
 }
 
 /// Most items act as both an App and a Container, depending upon the context. Each will need

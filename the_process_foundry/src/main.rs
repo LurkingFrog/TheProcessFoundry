@@ -40,7 +40,19 @@ pub fn get_bash(registry: &Registry) -> Result<Box<dyn AppTrait>> {
             x, def.name
         ))?,
     };
-    factory.build()
+
+    factory.build(None)
+}
+
+pub fn find_docker_compose(bash: Box<dyn AppTrait>) -> Result<()> {
+    let compose = AppDefinition {
+        name: "docker-compose".to_string(),
+        ..Default::default()
+    };
+    let action = applications::bash::FindApp { search_paths: None };
+    let result = action.run(bash, compose)?;
+    log::debug!("We found an app instance:\n{:#?}", result);
+    Ok(())
 }
 
 pub fn bootstrap() -> Result<()> {
@@ -56,9 +68,8 @@ pub fn bootstrap() -> Result<()> {
     // - Get the local shell from foundry - default user shell, fallback bash
     let local = get_bash(&registry)?;
 
-    // - Run "echo Hello World" on bash
-
     // - Find docker-compose on bash
+    let docker_compose = find_docker_compose(local)?;
 
     // - Register docker-compose app in registry
 

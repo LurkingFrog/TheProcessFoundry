@@ -21,6 +21,9 @@ pub enum FoundryError {
 
   #[error("We received an error that was not explicitly handled")]
   UnhandledError,
+
+  #[error("Got to a surprise option in a match statement")]
+  Unreachable,
 }
 
 impl From<std::num::ParseIntError> for FoundryError {
