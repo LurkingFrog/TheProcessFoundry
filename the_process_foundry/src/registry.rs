@@ -71,7 +71,7 @@ pub trait FactoryTrait {
   fn get_definition(&self) -> Result<AppDefinition>;
 
   /// Construct an instance of the app module based on the container it is in
-  fn build(&self, container: Option<Box<dyn AppTrait>>) -> Result<Box<dyn AppTrait>>;
+  fn build(&self, definition: AppDefinition) -> Result<Box<dyn AppTrait>>;
 }
 
 /// Most items act as both an App and a Container, depending upon the context. Each will need
@@ -88,36 +88,6 @@ pub enum ActsAs {
 impl Default for ActsAs {
   fn default() -> Self {
     ActsAs::Either
-  }
-}
-
-/// This defines the version of container/application management code as well as used for searching the
-/// registry
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct AppDefinition {
-  pub name: String,
-  pub module_version: Option<semver::Version>,
-  pub acts_as: ActsAs,
-  pub works_with: Option<semver::VersionReq>,
-  pub aliases: Option<Vec<String>>,
-}
-
-impl AppDefinition {
-  pub fn new(name: String, version: semver::Version) -> AppDefinition {
-    AppDefinition {
-      name,
-      acts_as: ActsAs::Either,
-      module_version: Some(version),
-      works_with: None,
-      aliases: None,
-    }
-  }
-
-  pub fn full_name(&self) -> String {
-    match &self.module_version {
-      Some(ver) => format!("{} ({})", self.name, ver),
-      None => format!("{} ({})", self.name, "Unknown Version"),
-    }
   }
 }
 

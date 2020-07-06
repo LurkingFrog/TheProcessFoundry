@@ -1,8 +1,11 @@
 //! A placeholder to group all the developmental applications
 
-pub mod bash;
-
-use super::registry::*;
 use super::FoundryError;
+use super::{ActionTrait, AppTrait, ContainerTrait, LocalTrait};
+use super::{AppInstance, AppQuery};
 
-pub use bash::{Bash, BashFactory};
+pub mod bash;
+// pub mod docker_compose;
+
+pub use bash::Bash;
+// pub use docker_compose::{DockerCompose, DockerComposeFactory};

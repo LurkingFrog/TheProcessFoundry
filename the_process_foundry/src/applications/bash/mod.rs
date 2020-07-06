@@ -6,6 +6,7 @@ const APP_NAME: &str = "Bash";
 const MODULE_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 use anyhow::{Context, Result};
+use std::collections::HashMap;
 use std::process::Command;
 
 // This should likely be enumerated as it will be forked off into a separate project sooner rather than later
@@ -14,81 +15,62 @@ use super::*;
 use serde_derive::{Deserialize, Serialize};
 
 pub struct Bash {
-  // The "As App" values
-  pub path: Option<String>,
-  pub version: Option<semver::Version>,
-  // The "As container" values
-  // pub apps: Registry?
+  /// A place to store find_app results
+  /// Too many applications exist to enumerate them all, so we want to remember as many as possible
+  // HACK: This should be a registry/cache rather than a simple hashmap
+  app_cache: HashMap<String, AppInstance>,
+  instance: AppInstance,
 }
 
-impl AppTrait for Bash {
-  fn get_name(&self) -> String {
-    match &self.version {
-      Some(ver) => format!("{} ({})", APP_NAME, ver),
-      None => "Bash (Unknown Version)".to_string(),
-    }
-  }
-}
-
-pub struct BashFactory {}
-
-impl BashFactory {
-  pub fn new() -> BashFactory {
-    BashFactory {}
-  }
-}
-
-impl FactoryTrait for BashFactory {
-  fn get_definition(&self) -> Result<AppDefinition> {
-    let version = {
+impl Bash {
+  fn get_module_version() -> Result<semver::Version> {
+    Ok({
       semver::Version::parse(MODULE_VERSION).context(format!(
         "{} has an invalid version number '{}' Cargo.toml",
         APP_NAME, MODULE_VERSION
       ))
-    }?;
-    Ok(AppDefinition::new(APP_NAME.to_string(), version))
+    }?)
   }
+}
 
-  fn build(&self, container: Option<Box<dyn AppTrait>>) -> Result<Box<dyn AppTrait>> {
-    // No container assumes it is the "local" copy we want. Some requires to just find the path/version otherwise
-    // we need to ask the container (like docker)
-    // it lives in. I'm doing this more for the info than from any need since I'm generally assuming
-    // bash exists in each container.
-    match container {
-      Some(_contain) => unimplemented!("Finding the Remote Bash shell is not ready yet"),
-      None => {
-        let shell = Bash {
-          path: Some("bash".to_string()),
-          version: None,
-        };
-        let act = FindApp { search_paths: None };
-        let def = AppDefinition {
-          name: "bash".to_string(),
-          ..Default::default()
-        };
+impl LocalTrait for Bash {
+  //
+  fn get_local() -> Result<AppInstance> {
+    // TODO: Actually fill out the app instance
+    Ok(AppInstance::new("bash".to_string()))
+  }
+}
 
-        let instance = match act.run(Box::new(shell), def)? {
-          ActionResult::FindAppResult(result) => result,
-          x => Err(FoundryError::Unreachable).context(format!(
-            "Ran Bash::FindApp but did not get a FindAppResult:{:#?}",
-            x
-          ))?,
-        };
-
-        Ok(Box::new(Bash {
-          path: instance.path,
-          version: None,
-        }))
-      }
+impl AppTrait for Bash {
+  fn get_name(&self) -> String {
+    match &self.instance.version {
+      Some(ver) => format!("{} ({})", APP_NAME, ver),
+      None => "Bash (Unknown Version)".to_string(),
     }
   }
+
+  fn build(instance: AppInstance) -> Result<Bash> {
+    Ok(Bash {
+      app_cache: HashMap::new(),
+      instance: AppInstance {
+        module_version: Some(Bash::get_module_version()?),
+        ..instance.clone()
+      },
+    })
+  }
+
+  /// Knows how to get the version number of the installed app (not the module version)
+  fn set_version(instance: AppInstance) -> Result<AppInstance> {
+    unimplemented!()
+  }
+  /// Figures out how to call the cli using the given container
+  /// THINK: is it better to have an option or make "Local" a special case?
+  fn set_cli(instance: AppInstance, container: Box<dyn ContainerTrait>) -> Result<AppInstance> {
+    unimplemented!()
+  }
 }
 
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
-pub struct FindApp {
-  pub search_paths: Option<Vec<String>>,
-  // pub case_insensitive: bool,
-}
+type FindApp = AppQuery;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Action {
@@ -108,34 +90,24 @@ pub struct RunOptions {}
 impl ActionTrait for FindApp {
   type RESPONSE = ActionResult;
   /// Find the first app that matches the conditions of AppDefinition (name, version,  path, etc)
-  fn run(
-    &self,
-    container: Box<dyn AppTrait>,
-    application: AppDefinition,
-  ) -> Result<Self::RESPONSE> {
+  fn run(&self, target: AppInstance) -> Result<Self::RESPONSE> {
     let result = Command::new("bash")
-      .args(&["-c", &format!("command -v {}", application.name)])
+      .args(&["-c", &format!("command -v {}", target.name)])
       .output();
 
     // THis should be another command based on ActionDefinition
     let version = "1.0.0";
     match result {
       Ok(output) => {
-        let app = AppInstance {
-          process_id: None,
-          name: application.name,
-          path: Some(String::from_utf8(output.stdout)?.trim().to_string()),
-          container_id: None,
-          factory_id: None,
-          version: semver::Version::parse(version)?,
-        };
+        // TODO: Set the networking/cli in the AppInstance
+        let app = AppInstance::new(self.name.clone());
         Ok(ActionResult::FindAppResult(app))
       }
       Err(err) => {
         let msg = format!(
           "{} could not find local executable for {}",
-          container.get_name(),
-          application.name
+          target.full_name(),
+          self.name,
         );
         log::warn!("{}", msg);
         Err(FoundryError::NotFound).context(msg)
@@ -143,7 +115,7 @@ impl ActionTrait for FindApp {
     }
   }
 
-  fn to_string(&self, application: Box<dyn AppTrait>) -> Result<Vec<String>> {
+  fn to_string(&self, target: AppInstance) -> Result<Vec<String>> {
     unimplemented!("ActionTrait not implemented for shell")
   }
 }

@@ -10,6 +10,9 @@ pub enum FoundryError {
   #[error("There was an error attempting to convert from one type to another")]
   ConversionError,
 
+  #[error("The application has a problem with the configuration")]
+  ConfigurationError,
+
   #[error("This item's key is already in use")]
   DuplicateKeyError,
 

@@ -15,84 +15,70 @@ use anyhow::{Context, Result};
 use error::FoundryError;
 
 pub mod applications;
+pub mod base;
 pub mod error;
-pub mod registry;
-pub mod shell;
+// pub mod helpers;
+// pub mod registry;
 
-use registry::*;
+use applications::Bash;
+use base::*;
 
+//
 // Get a bash object
-pub fn get_bash(registry: &Registry) -> Result<Box<dyn AppTrait>> {
-    let def = AppDefinition {
-        name: "Bash".to_string(),
-        ..Default::default()
-    };
+// pub fn find_bash(registry: &Registry) -> Result<Box<dyn AppTrait>> {
+//     let def = AppQuery {
+//         name: "Bash".to_string(),
+//         ..Default::default()
+//     };
 
-    let matches = registry.find(&def)?;
-    let factory = match matches.len() {
-        0 => Err(FoundryError::NotFound).context(format!(
-            "No instances matching your defition of {} have been registered",
-            def.name
-        ))?,
-        1 => matches.get(0).unwrap(),
-        x => Err(FoundryError::MultipleMatches).context(format!(
-            "{} instances matching your defition for {} have been registered. Please narrow your criteria",
-            x, def.name
-        ))?,
-    };
+//     let matches = registry.find(&def)?;
+//     let factory = match matches.len() {
+//         0 => Err(FoundryError::NotFound).context(format!(
+//             "No instances matching your defition of {} have been registered",
+//             def.name
+//         ))?,
+//         1 => matches.get(0).unwrap(),
+//         x => Err(FoundryError::MultipleMatches).context(format!(
+//             "{} instances matching your defition for {} have been registered. Please narrow your criteria",
+//             x, def.name
+//         ))?,
+//     };
 
-    factory.build(None)
-}
+//     factory.build(None)
+// }
 
-pub fn find_docker_compose(bash: Box<dyn AppTrait>) -> Result<()> {
-    let compose = AppDefinition {
-        name: "docker-compose".to_string(),
-        ..Default::default()
-    };
-    let action = applications::bash::FindApp { search_paths: None };
-    let result = action.run(bash, compose)?;
-    log::debug!("We found an app instance:\n{:#?}", result);
-    Ok(())
-}
+// pub fn find_docker_compose(shell: Box<dyn ContainerTrait>) -> Result<DockerCompose> {
+//     let compose_query = AppQuery::new("docker-compose".to_string()).unique();
+//     let action = shell
+//         .find_app(compose_query)
+//         .context("Could not find docker-compose")?;
+//     // let inst = action.run(bash, compose)?;
+// }
 
 pub fn bootstrap() -> Result<()> {
-    // Bootstrap
-    // - Create Registry
-    let mut registry = Registry::new();
-    log::debug!("The registry has been created:\n{}", registry);
+    // Get the local bash shell
+    let shell = base::Shell::get_local_shell()
+        .context("Oh noes, my bootstrap failed to get a local shell")?;
 
-    // - Load the core Apps
-    registry.register_factory(Box::new(applications::BashFactory::new()))?;
-    log::debug!("I've registered Bash:\n{}", registry);
+    let bash = Bash::build(shell.instance.clone())
+        .context("Building bash from the local shell didn't work")?;
 
-    // - Get the local shell from foundry - default user shell, fallback bash
-    let local = get_bash(&registry)?;
+    // Find Docker Compose using local bash
+    // let dc = find_docker_compose(bash).context("Couldn't bootstrap docker compose")?;
 
-    // - Find docker-compose on bash
-    let docker_compose = find_docker_compose(local)?;
+    // Load Docker Compose
 
-    // - Register docker-compose app in registry
+    // Get Postgres Docker
 
-    // - Get docker-compose app from foundry
+    // Find PG Backup on Postgres
 
-    // - Get docker-compose container from compose app
-
-    // - Read yaml into docker-compose
-
-    // - Register postgres with registry
-
-    // - Get postgres app from compose container?
-
-    // - Register pg_basebackup with foundry
-    // - Get pg_basebackup app based on compose/postgres app
-
-    // - Refactor and rename - test and document things so they make sense
     Ok(())
 }
 
 fn main() {
     env_logger::init();
     log::info!("Starting to run the Process foundry");
+
     let _ = bootstrap().unwrap();
     log::info!("Finished bootstrapping the foundry")
 }

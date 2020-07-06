@@ -11,6 +11,9 @@ edition = "2018"
 log = "0.4.8"
 env_logger = "0.7.1"
 
+# Some standard environment variables
+dirs = "3.0.0"
+
 # Error creation
 anyhow = "1.0.31"
 thiserror = "1.0.20"
@@ -28,3 +31,6 @@ schemars = "0.8.0-alpha-4"
 
 # Unique IDs
 uuid = { version = "0.8.1", features = ["v4", "serde"] }
+
+# Regex (How does one write software without this?)
+regex = "1"
