@@ -20,40 +20,16 @@ pub mod error;
 // pub mod helpers;
 // pub mod registry;
 
-use applications::Bash;
+use applications::{Bash, DockerCompose};
 use base::*;
 
-//
-// Get a bash object
-// pub fn find_bash(registry: &Registry) -> Result<Box<dyn AppTrait>> {
-//     let def = AppQuery {
-//         name: "Bash".to_string(),
-//         ..Default::default()
-//     };
-
-//     let matches = registry.find(&def)?;
-//     let factory = match matches.len() {
-//         0 => Err(FoundryError::NotFound).context(format!(
-//             "No instances matching your defition of {} have been registered",
-//             def.name
-//         ))?,
-//         1 => matches.get(0).unwrap(),
-//         x => Err(FoundryError::MultipleMatches).context(format!(
-//             "{} instances matching your defition for {} have been registered. Please narrow your criteria",
-//             x, def.name
-//         ))?,
-//     };
-
-//     factory.build(None)
-// }
-
-// pub fn find_docker_compose(shell: Box<dyn ContainerTrait>) -> Result<DockerCompose> {
-//     let compose_query = AppQuery::new("docker-compose".to_string()).unique();
-//     let action = shell
-//         .find_app(compose_query)
-//         .context("Could not find docker-compose")?;
-//     // let inst = action.run(bash, compose)?;
-// }
+pub fn find_docker_compose(shell: Box<dyn ContainerTrait>) -> Result<DockerCompose> {
+    let compose_query = AppQuery::new("docker-compose".to_string());
+    let instance = shell
+        .find_app(compose_query)
+        .context("Could not find docker-compose")?;
+    DockerCompose::build(instance.get(1).unwrap().clone())
+}
 
 pub fn bootstrap() -> Result<()> {
     // Get the local bash shell
@@ -64,7 +40,7 @@ pub fn bootstrap() -> Result<()> {
         .context("Building bash from the local shell didn't work")?;
 
     // Find Docker Compose using local bash
-    // let dc = find_docker_compose(bash).context("Couldn't bootstrap docker compose")?;
+    let dc = find_docker_compose(Box::new(bash)).context("Couldn't bootstrap docker compose")?;
 
     // Load Docker Compose
 

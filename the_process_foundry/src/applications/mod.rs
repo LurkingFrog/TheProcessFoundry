@@ -5,7 +5,7 @@ use super::{ActionTrait, AppTrait, ContainerTrait, LocalTrait};
 use super::{AppInstance, AppQuery};
 
 pub mod bash;
-// pub mod docker_compose;
+pub mod docker_compose;
 
 pub use bash::Bash;
-// pub use docker_compose::{DockerCompose, DockerComposeFactory};
+pub use docker_compose::DockerCompose;

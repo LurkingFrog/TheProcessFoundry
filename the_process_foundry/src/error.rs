@@ -16,6 +16,9 @@ pub enum FoundryError {
   #[error("This item's key is already in use")]
   DuplicateKeyError,
 
+  #[error("There was a problem with the file")]
+  IoError,
+
   #[error("Received multiple instances when looking for a single unique response")]
   MultipleMatches,
 

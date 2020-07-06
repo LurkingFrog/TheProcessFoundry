@@ -14,6 +14,7 @@ use super::*;
 
 use serde_derive::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Bash {
   /// A place to store find_app results
   /// Too many applications exist to enumerate them all, so we want to remember as many as possible
@@ -31,6 +32,13 @@ impl Bash {
       ))
     }?)
   }
+
+  fn get_name(&self) -> String {
+    match &self.instance.version {
+      Some(ver) => format!("{} ({})", APP_NAME, ver),
+      None => "Bash (Unknown Version)".to_string(),
+    }
+  }
 }
 
 impl LocalTrait for Bash {
@@ -43,10 +51,7 @@ impl LocalTrait for Bash {
 
 impl AppTrait for Bash {
   fn get_name(&self) -> String {
-    match &self.instance.version {
-      Some(ver) => format!("{} ({})", APP_NAME, ver),
-      None => "Bash (Unknown Version)".to_string(),
-    }
+    self.get_name()
   }
 
   fn build(instance: AppInstance) -> Result<Bash> {
@@ -64,9 +69,27 @@ impl AppTrait for Bash {
     unimplemented!()
   }
   /// Figures out how to call the cli using the given container
-  /// THINK: is it better to have an option or make "Local" a special case?
   fn set_cli(instance: AppInstance, container: Box<dyn ContainerTrait>) -> Result<AppInstance> {
     unimplemented!()
+  }
+}
+
+impl ContainerTrait for Bash {
+  /// This will find a list of apps with configurations that the container knows about
+  fn find_app(&self, query: AppQuery) -> Result<Vec<AppInstance>> {
+    match Action::FindApp(query).run(self.clone())? {
+      ActionResult::FindAppResult(result) => Ok(result),
+    }
+  }
+
+  /// List the known items in the app cache
+  fn found_apps(&self) -> Result<Vec<AppInstance>> {
+    unimplemented!("No App Cache for Bash Yet")
+  }
+
+  /// Get the name/version of the container, usually for use in logging/errors.
+  fn get_name(&self) -> String {
+    self.get_name()
   }
 }
 
@@ -78,10 +101,20 @@ pub enum Action {
   FindApp(FindApp),
 }
 
+// TODO: Make a derive for this
+impl Action {
+  fn run(&self, target: Bash) -> Result<ActionResult> {
+    match self {
+      Action::Run(opts) => unimplemented!("Don't know how to run a command on Bash yet"),
+      Action::FindApp(query) => query.run(target.instance),
+    }
+  }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ActionResult {
   // Run(RunResult),
-  FindAppResult(AppInstance),
+  FindAppResult(Vec<AppInstance>),
 }
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
@@ -101,7 +134,7 @@ impl ActionTrait for FindApp {
       Ok(output) => {
         // TODO: Set the networking/cli in the AppInstance
         let app = AppInstance::new(self.name.clone());
-        Ok(ActionResult::FindAppResult(app))
+        Ok(ActionResult::FindAppResult(vec![app]))
       }
       Err(err) => {
         let msg = format!(
