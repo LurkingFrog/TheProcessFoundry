@@ -12,5 +12,4 @@ pub mod application;
 pub mod schema;
 
 use super::*;
-
-pub use application::{Action, ActionResponse, DockerCompose, Event};
+pub use application::{Action, ActionResult, DockerCompose, Event};

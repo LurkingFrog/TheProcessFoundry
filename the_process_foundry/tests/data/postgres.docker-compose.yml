@@ -1,0 +1,57 @@
+version: "3.6"
+services:
+  taiga-back:
+    build:
+      context: .
+      dockerfile: taiga-back.Dockerfile
+    working_dir: /src/
+    command:
+      - "python3"
+      - "manage.py"
+      - "runserver"
+      - "0.0.0.0:9080"
+    depends_on:
+      - postgres
+    ports:
+      - target: 9080
+        published: 9080
+        protocol: tcp
+        mode: host
+    volumes:
+      - ~/Foundry/Panama/installers/taiga/build/src/taiga-back:/src
+
+  taiga-front:
+    build:
+      context: .
+      dockerfile: taiga-front.Dockerfile
+    working_dir: /src
+    depends_on:
+      - taiga-back
+    ports:
+      # Main server
+      - target: 9001
+        published: 9001
+        protocol: tcp
+        mode: host
+      # Live Reload
+      - target: 35729
+        published: 35729
+        protocol: tcp
+        mode: host
+
+    command:
+      - "./node_modules/.bin/gulp"
+    volumes:
+      - ~/Foundry/Panama/installers/taiga/build/src/taiga-front:/src
+
+  postgres:
+    image: postgres
+    restart: always
+    # user: ${CURRENT_UID}
+    environment:
+      POSTGRES_PASSWORD: password
+    # POSTGRES_USER: ${USER}
+    volumes:
+      # - ~/Foundry/Panama/installers/taiga/data/postgresql/:/var/lib/postgresql/data
+      # - /etc/passwd:/etc/passwd:ro
+      # - ~/Foundry/Panama/installers/taiga/build/conf/add_self.sh/:/docker-entrypoint-initdb.d/add_self.sh

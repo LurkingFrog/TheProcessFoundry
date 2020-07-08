@@ -12,8 +12,9 @@ use std::boxed::Box;
 use std::collections::HashMap;
 
 use super::schema::*;
+use super::DockerContainer;
 use super::FoundryError;
-use super::{AppInstance, AppTrait, ContainerTrait};
+use super::{AppInstance, AppQuery, AppTrait, ContainerTrait};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DockerCompose {
@@ -23,6 +24,7 @@ pub struct DockerCompose {
   app_cache: HashMap<String, AppInstance>,
   instance: AppInstance,
   config: Option<Schema>,
+  containers: HashMap<String, DockerContainer>,
 }
 
 impl AppTrait for DockerCompose {
@@ -41,18 +43,39 @@ impl AppTrait for DockerCompose {
         ..instance.clone()
       },
       config: None,
+      containers: Default::default(),
     })
   }
 
   /// Knows how to get the version number of the instaAppTrait
   /// Figures out how to call the cli using the given container
-  fn set_cli(instance: AppInstance, container: Box<dyn ContainerTrait>) -> Result<AppInstance> {
+  fn set_cli(_instance: AppInstance, _container: Box<dyn ContainerTrait>) -> Result<AppInstance> {
     unimplemented!()
   }
 
   /// Knows how to get the version number of the installed app (not the module version)
-  fn set_version(instance: AppInstance) -> Result<AppInstance> {
+  fn set_version(_instance: AppInstance) -> Result<AppInstance> {
     unimplemented!()
+  }
+}
+
+impl ContainerTrait for DockerCompose {
+  /// This will find a list of apps with configurations that the container knows about
+  fn find_all(&self, query: AppQuery) -> Result<Vec<AppInstance>> {
+    match Action::Find(query).run(self.clone())? {
+      ActionResult::FindResult(result) => Ok(result),
+      _ => unreachable!("Should only have FindAppResults returned from the FindApp action"),
+    }
+  }
+
+  /// List the known items in the app cache
+  fn cached_apps(&self) -> Result<Vec<AppInstance>> {
+    unimplemented!("No App Cache for Bash Yet")
+  }
+
+  /// Get the name/version of the container, usually for use in logging/errors.
+  fn get_name(&self) -> String {
+    self.get_name()
   }
 }
 
@@ -66,6 +89,14 @@ impl DockerCompose {
     }?)
   }
 
+  fn get_name(&self) -> String {
+    match &self.instance.version {
+      Some(ver) => format!("{} ({})", APP_NAME, ver),
+      None => format!("{} (Unknown Version)", APP_NAME),
+    }
+  }
+
+  /// Load the
   pub fn load(&self, config_file: String) -> Result<DockerCompose> {
     log::debug!("reading the docker compose schema");
 
@@ -88,10 +119,11 @@ impl DockerCompose {
     })
   }
 
-  //   pub fn act(&self, action: Action) -> Result<ActionResponse, Error> {
-  //     action.run(self)
-  //   }
+  pub fn get_container(&self, name: String) -> Result<DockerContainer> {
+    unimplemented!()
+  }
 }
+
 // impl super::BackupTrait for DockerCompose {
 //   fn run_init(conf: super::BackupConfig) -> Result<(), Error> {
 //     log::debug!("Checking for path");
@@ -145,25 +177,26 @@ pub enum Event {
   BuildComplete,
 }
 
+type FindApp = AppQuery;
+
+/// The actions exposed via API
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum Action {
+  Find(FindApp),
+  /// Dump the configuration to the given file location. Useful for adding volumes/ports on the fly
+  Export,
+}
+
 /// The responses from the various actions.
-///
-/// It's easier to bundle them all up in an enum for schema purposes
-#[derive(Clone, Debug, JsonSchema, Serialize, Deserialize)]
-pub enum ActionResponse {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ActionResult {
+  // Run(RunResult),
+  FindResult(Vec<AppInstance>),
   ListServices(Vec<String>),
 }
 
-/// The actions exposed via API
-#[derive(Clone, Debug, JsonSchema, Serialize, Deserialize)]
-pub enum Action {
-  /// Dump the configuration to the given file location. Useful for adding volumes/ports on the fly
-  Export,
-  /// List the services for a given config
-  ListServices,
-}
-
 impl Action {
-  fn run(&self, compose: &DockerCompose) -> Result<ActionResponse> {
+  fn run(&self, compose: DockerCompose) -> Result<ActionResult> {
     // We shouldn't be able to run anything without a valid configuration
     let conf = match &compose.config {
       Some(conf) => conf,
@@ -174,10 +207,18 @@ impl Action {
     };
 
     match self {
-      &Action::Export => unimplemented!("Next up, Export"),
-      &Action::ListServices => {
-        log::debug!("Got List Services:");
-        Ok(ActionResponse::ListServices(conf.list_service_names()))
+      Action::Export => unimplemented!("Next up, Export"),
+      Action::Find(query) => {
+        let services = conf
+          .list_service_names()
+          .into_iter()
+          .filter_map(|item| match item.to_lowercase() == query.name {
+            false => None,
+            true => Some(AppInstance::new(item)),
+          })
+          .collect();
+
+        Ok(ActionResult::FindResult(services))
       }
     }
   }

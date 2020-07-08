@@ -20,15 +20,15 @@ pub mod error;
 // pub mod helpers;
 // pub mod registry;
 
-use applications::{Bash, DockerCompose};
+use applications::{Bash, DockerCompose, DockerContainer};
 use base::*;
 
-pub fn find_docker_compose(shell: Box<dyn ContainerTrait>) -> Result<DockerCompose> {
-    let compose_query = AppQuery::new("docker-compose".to_string());
-    let instance = shell
-        .find_app(compose_query)
-        .context("Could not find docker-compose")?;
-    DockerCompose::build(instance.get(1).unwrap().clone())
+pub fn find(container: Box<dyn ContainerTrait>, app_name: String) -> Result<AppInstance> {
+    let query = AppQuery::new(app_name.clone());
+    let instance = container
+        .find_one(query)
+        .context(format!("Could not find the {} in bootstrap", app_name))?;
+    Ok(instance)
 }
 
 pub fn bootstrap() -> Result<()> {
@@ -36,18 +36,27 @@ pub fn bootstrap() -> Result<()> {
     let shell = base::Shell::get_local_shell()
         .context("Oh noes, my bootstrap failed to get a local shell")?;
 
-    let bash = Bash::build(shell.instance.clone())
-        .context("Building bash from the local shell didn't work")?;
+    let bash = Box::new(
+        Bash::build(shell.instance.clone())
+            .context("Building bash from the local shell didn't work")?,
+    );
 
-    // Find Docker Compose using local bash
-    let dc = find_docker_compose(Box::new(bash)).context("Couldn't bootstrap docker compose")?;
+    // Find Docker Compose using local bash and load the test compose file
+    let dc = Box::new(
+        DockerCompose::build(
+            find(bash.clone(), "docker-compose".to_string())?
+        )?
+        .load("/home/dfogelson/Foundry/TheProcessFoundry/the_process_foundry/tests/data/postgres.docker-compose.yml".to_string())?);
 
-    // Load Docker Compose
-
-    // Get Postgres Docker
+    // Find postgres container
+    let pg = find(dc.clone(), "postgres".to_string())?;
+    let pg_container = Box::new(dc.get_container(pg.name)?);
 
     // Find PG Backup on Postgres
+    // let pg_backup = find(pg_container.clone(), "pg_backup".to_string())?;
 
+    // Get the local filesystem
+    // let fs = fs::FileSystem(bash)
     Ok(())
 }
 

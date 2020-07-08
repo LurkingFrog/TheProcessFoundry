@@ -3,9 +3,11 @@
 //! After getting lost in the weeds, this is all the things that I seem to see come up as useful in every
 //! application and conatainer
 
-use super::Bash;
 use anyhow::{Context, Result};
 use serde_derive::{Deserialize, Serialize};
+
+use super::Bash;
+use super::FoundryError;
 
 /// All applications should be introspective and able to build a running manager of itself
 pub trait AppTrait {
@@ -29,10 +31,26 @@ pub trait AppTrait {
 /// Ways to manage applications (eg Docker, Bash) contained within itself
 pub trait ContainerTrait {
   /// This will find a list of apps with configurations that the container knows about
-  fn find_app(&self, query: AppQuery) -> Result<Vec<AppInstance>>;
+  fn find_all(&self, query: AppQuery) -> Result<Vec<AppInstance>>;
+
+  /// Find a unique app that matches the query
+  fn find_one(&self, query: AppQuery) -> Result<AppInstance> {
+    let all = self.find_all(query.clone())?;
+    match all.len() {
+      0 => Err(FoundryError::NotFound).context(format!(
+          "No instances matching your query of {} have been registered",
+          query.name
+      )),
+      1 => Ok(all.get(0).unwrap().clone()),
+      x => Err(FoundryError::MultipleMatches).context(format!(
+          "{} instances matching your defition for {} have been registered. Please narrow your search criteria",
+          x, query.name
+      )),
+    }
+  }
 
   /// List the known items in the app cache
-  fn found_apps(&self) -> Result<Vec<AppInstance>>;
+  fn cached_apps(&self) -> Result<Vec<AppInstance>>;
 
   /// Get the name/version of the container, usually for use in logging/errors.
   fn get_name(&self) -> String;
@@ -181,7 +199,7 @@ impl Shell {
     };
 
     let instance = match shell_type {
-      ShellType::Bash => Bash::get_local()?,
+      ShellType::Bash => Bash::get_local().context("Could not get a local Bash shell")?,
       _ => unreachable!("Should currently not be able to use any local shell other than bash"),
     };
 
@@ -200,6 +218,7 @@ pub trait ActionTrait {
 
   // Convert this action into a std::process::Command style vector to be run in a place where the
   // foundry cannot directly access (like a docker container)
+  // THINK: To string doesn't make as much sense for network/api calls
   fn to_string(&self, target: AppInstance) -> Result<Vec<String>>;
 
   // This is a long term goal, be able to generate stand-alone scripts based on the container actions

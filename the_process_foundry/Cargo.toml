@@ -34,3 +34,6 @@ uuid = { version = "0.8.1", features = ["v4", "serde"] }
 
 # Regex (How does one write software without this?)
 regex = "1"
+
+# Docker Management
+# shiplift = { path = "../shiplift" }

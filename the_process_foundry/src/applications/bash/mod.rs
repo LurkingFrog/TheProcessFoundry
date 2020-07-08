@@ -6,13 +6,12 @@ const APP_NAME: &str = "Bash";
 const MODULE_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 use anyhow::{Context, Result};
+use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::process::Command;
 
 // This should likely be enumerated as it will be forked off into a separate project sooner rather than later
 use super::*;
-
-use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Bash {
@@ -36,7 +35,7 @@ impl Bash {
   fn get_name(&self) -> String {
     match &self.instance.version {
       Some(ver) => format!("{} ({})", APP_NAME, ver),
-      None => "Bash (Unknown Version)".to_string(),
+      None => format!("{} (Unknown Version)", APP_NAME),
     }
   }
 }
@@ -65,25 +64,25 @@ impl AppTrait for Bash {
   }
 
   /// Knows how to get the version number of the installed app (not the module version)
-  fn set_version(instance: AppInstance) -> Result<AppInstance> {
+  fn set_version(_instance: AppInstance) -> Result<AppInstance> {
     unimplemented!()
   }
   /// Figures out how to call the cli using the given container
-  fn set_cli(instance: AppInstance, container: Box<dyn ContainerTrait>) -> Result<AppInstance> {
+  fn set_cli(_instance: AppInstance, _container: Box<dyn ContainerTrait>) -> Result<AppInstance> {
     unimplemented!()
   }
 }
 
 impl ContainerTrait for Bash {
   /// This will find a list of apps with configurations that the container knows about
-  fn find_app(&self, query: AppQuery) -> Result<Vec<AppInstance>> {
+  fn find_all(&self, query: AppQuery) -> Result<Vec<AppInstance>> {
     match Action::FindApp(query).run(self.clone())? {
       ActionResult::FindAppResult(result) => Ok(result),
     }
   }
 
   /// List the known items in the app cache
-  fn found_apps(&self) -> Result<Vec<AppInstance>> {
+  fn cached_apps(&self) -> Result<Vec<AppInstance>> {
     unimplemented!("No App Cache for Bash Yet")
   }
 
@@ -105,7 +104,7 @@ pub enum Action {
 impl Action {
   fn run(&self, target: Bash) -> Result<ActionResult> {
     match self {
-      Action::Run(opts) => unimplemented!("Don't know how to run a command on Bash yet"),
+      Action::Run(_opts) => unimplemented!("Don't know how to run a command on Bash yet"),
       Action::FindApp(query) => query.run(target.instance),
     }
   }
@@ -129,14 +128,13 @@ impl ActionTrait for FindApp {
       .output();
 
     // THis should be another command based on ActionDefinition
-    let version = "1.0.0";
     match result {
-      Ok(output) => {
+      Ok(_output) => {
         // TODO: Set the networking/cli in the AppInstance
         let app = AppInstance::new(self.name.clone());
         Ok(ActionResult::FindAppResult(vec![app]))
       }
-      Err(err) => {
+      Err(_err) => {
         let msg = format!(
           "{} could not find local executable for {}",
           target.full_name(),
@@ -148,7 +146,7 @@ impl ActionTrait for FindApp {
     }
   }
 
-  fn to_string(&self, target: AppInstance) -> Result<Vec<String>> {
+  fn to_string(&self, _target: AppInstance) -> Result<Vec<String>> {
     unimplemented!("ActionTrait not implemented for shell")
   }
 }

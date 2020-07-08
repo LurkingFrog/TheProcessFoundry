@@ -6,6 +6,10 @@ use super::{AppInstance, AppQuery};
 
 pub mod bash;
 pub mod docker_compose;
+pub mod docker_container;
+pub mod postgres;
 
 pub use bash::Bash;
 pub use docker_compose::DockerCompose;
+pub use docker_container::DockerContainer;
+pub use postgres::Postgres;

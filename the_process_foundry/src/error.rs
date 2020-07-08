@@ -30,6 +30,9 @@ pub enum FoundryError {
 
   #[error("Got to a surprise option in a match statement")]
   Unreachable,
+
+  #[error("Trouble with a Yaml configuration")]
+  YamlError,
 }
 
 impl From<std::num::ParseIntError> for FoundryError {
