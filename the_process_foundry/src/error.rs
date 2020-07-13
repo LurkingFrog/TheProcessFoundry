@@ -22,8 +22,14 @@ pub enum FoundryError {
   #[error("Received multiple instances when looking for a single unique response")]
   MultipleMatches,
 
+  #[error("The app has not been configured for the action you are trying to run")]
+  NotConfigured,
+
   #[error("The item you were looking for was not found")]
   NotFound,
+
+  #[error("The value received doesn't appear to match the expected format")]
+  UnexpectedValue,
 
   #[error("We received an error that was not explicitly handled")]
   UnhandledError,

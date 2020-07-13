@@ -40,7 +40,7 @@ impl AppTrait for Postgres {
     self.get_name()
   }
 
-  fn build(instance: AppInstance) -> Result<Postgres> {
+  fn build(instance: AppInstance, _parent: Option<Rc<dyn ContainerTrait>>) -> Result<Postgres> {
     Ok(Postgres {
       instance: AppInstance {
         module_version: Some(Postgres::get_module_version()?),
@@ -50,11 +50,15 @@ impl AppTrait for Postgres {
   }
 
   /// Knows how to get the version number of the installed app (not the module version)
-  fn set_version(_instance: AppInstance) -> Result<AppInstance> {
+  fn set_version(&self, _instance: AppInstance) -> Result<AppInstance> {
     unimplemented!()
   }
   /// Figures out how to call the cli using the given container
-  fn set_cli(_instance: AppInstance, _container: Box<dyn ContainerTrait>) -> Result<AppInstance> {
+  fn set_cli(
+    &self,
+    _instance: AppInstance,
+    _container: Rc<dyn ContainerTrait>,
+  ) -> Result<AppInstance> {
     unimplemented!()
   }
 }

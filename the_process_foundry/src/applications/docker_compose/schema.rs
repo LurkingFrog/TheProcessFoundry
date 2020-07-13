@@ -20,9 +20,10 @@ use std::collections::BTreeMap;
 pub struct Schema {
   // TODO: Change this to a AppTrait, so we can give remote options like git, curl or file
   /// The location of the serialized copy of the schema
-  source: Option<String>,
-  version: String,
-  services: BTreeMap<String, Service>,
+  #[serde(skip)]
+  pub source: Option<String>,
+  pub version: String,
+  pub services: BTreeMap<String, Service>,
   // networks: Vec<Network>,
   // volumes: Vec<Volume>,
   // secrets: Vec<Secret>,
@@ -39,6 +40,13 @@ impl Default for Schema {
 }
 
 impl Schema {
+  pub fn get_source(&self) -> String {
+    match &self.source {
+      Some(x) => x.clone(),
+      None => "No source set".to_string(),
+    }
+  }
+
   pub fn list_service_names(&self) -> Vec<String> {
     self.services.keys().map(|key| key.clone()).collect()
   }

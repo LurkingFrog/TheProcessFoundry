@@ -7,8 +7,8 @@ suck less.
 
 Most of my projects tend to be automation of wrapping APIs and CLIs (I know, essentiaally the same thing) and
 wiring them together. To reduce all the boilerplate, I'm abstracting each one into  set of Actions and Events
-that can be routed to each other. Hopefully, this hideously complex idea will make things simpler in the
-long run.
+that can be securely routed to each other. Hopefully, this hideously complex idea will make things simpler in
+the long run.
 
 ## The Initial Use Cases
 
@@ -20,7 +20,6 @@ I'm doing the proof of concept on two use cases:
 - Code watcher - A simple watcher that rebuilds project systems based on files changed - see watcher.sh for
   what I currently use. Each individual codebase/server should actually be run inside a docker container so
   we can work with everything as a proper microservice.
-
 
 ## TODOs
 

@@ -53,7 +53,7 @@ impl AppTrait for Bash {
     self.get_name()
   }
 
-  fn build(instance: AppInstance) -> Result<Bash> {
+  fn build(instance: AppInstance, _parent: Option<Rc<dyn ContainerTrait>>) -> Result<Bash> {
     Ok(Bash {
       app_cache: HashMap::new(),
       instance: AppInstance {
@@ -64,18 +64,22 @@ impl AppTrait for Bash {
   }
 
   /// Knows how to get the version number of the installed app (not the module version)
-  fn set_version(_instance: AppInstance) -> Result<AppInstance> {
+  fn set_version(&self, _instance: AppInstance) -> Result<AppInstance> {
     unimplemented!()
   }
   /// Figures out how to call the cli using the given container
-  fn set_cli(_instance: AppInstance, _container: Box<dyn ContainerTrait>) -> Result<AppInstance> {
+  fn set_cli(
+    &self,
+    _instance: AppInstance,
+    _container: Rc<dyn ContainerTrait>,
+  ) -> Result<AppInstance> {
     unimplemented!()
   }
 }
 
 impl ContainerTrait for Bash {
   /// This will find a list of apps with configurations that the container knows about
-  fn find_all(&self, query: AppQuery) -> Result<Vec<AppInstance>> {
+  fn find(&self, query: AppQuery) -> Result<Vec<AppInstance>> {
     match Action::FindApp(query).run(self.clone())? {
       ActionResult::FindAppResult(result) => Ok(result),
     }
@@ -84,6 +88,10 @@ impl ContainerTrait for Bash {
   /// List the known items in the app cache
   fn cached_apps(&self) -> Result<Vec<AppInstance>> {
     unimplemented!("No App Cache for Bash Yet")
+  }
+
+  fn forward(&self, to: AppInstance, message: Vec<String>) -> Result<String> {
+    unimplemented!("No ContainerTrait::forward yet")
   }
 
   /// Get the name/version of the container, usually for use in logging/errors.
@@ -124,7 +132,7 @@ impl ActionTrait for FindApp {
   /// Find the first app that matches the conditions of AppDefinition (name, version,  path, etc)
   fn run(&self, target: AppInstance) -> Result<Self::RESPONSE> {
     let result = Command::new("bash")
-      .args(&["-c", &format!("command -v {}", target.name)])
+      .args(&["-c", &format!("command -v {}", self.name)])
       .output();
 
     // THis should be another command based on ActionDefinition

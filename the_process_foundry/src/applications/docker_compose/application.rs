@@ -8,20 +8,20 @@ const MODULE_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 use anyhow::{Context, Result};
 use schemars::JsonSchema;
 use serde_derive::{Deserialize, Serialize};
-use std::boxed::Box;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use super::schema::*;
-use super::DockerContainer;
 use super::FoundryError;
-use super::{AppInstance, AppQuery, AppTrait, ContainerTrait};
+use super::{docker_container, DockerContainer};
+use super::{ActionTrait, AppInstance, AppQuery, AppTrait, ContainerTrait};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DockerCompose {
-  /// A place to store find_app results
-  /// Too many applications exist to enumerate them all, so we want to remember as many as possible
-  // HACK: This should be a registry/cache rather than a simple hashmap
-  app_cache: HashMap<String, AppInstance>,
+  /// We want to put the shell/parent container here
+  #[serde(skip)]
+  parent: Option<Rc<dyn ContainerTrait>>,
+  // docker: Docker,
   instance: AppInstance,
   config: Option<Schema>,
   containers: HashMap<String, DockerContainer>,
@@ -31,13 +31,13 @@ impl AppTrait for DockerCompose {
   fn get_name(&self) -> String {
     match &self.instance.version {
       Some(ver) => format!("{} ({})", APP_NAME, ver),
-      None => "Bash (Unknown Version)".to_string(),
+      None => format!("{} (Unknown Version)", APP_NAME),
     }
   }
 
-  fn build(instance: AppInstance) -> Result<DockerCompose> {
+  fn build(instance: AppInstance, parent: Option<Rc<dyn ContainerTrait>>) -> Result<DockerCompose> {
     Ok(DockerCompose {
-      app_cache: HashMap::new(),
+      parent,
       instance: AppInstance {
         module_version: Some(DockerCompose::get_module_version()?),
         ..instance.clone()
@@ -49,28 +49,45 @@ impl AppTrait for DockerCompose {
 
   /// Knows how to get the version number of the instaAppTrait
   /// Figures out how to call the cli using the given container
-  fn set_cli(_instance: AppInstance, _container: Box<dyn ContainerTrait>) -> Result<AppInstance> {
+  fn set_cli(
+    &self,
+    _instance: AppInstance,
+    _container: Rc<dyn ContainerTrait>,
+  ) -> Result<AppInstance> {
     unimplemented!()
   }
 
   /// Knows how to get the version number of the installed app (not the module version)
-  fn set_version(_instance: AppInstance) -> Result<AppInstance> {
+  fn set_version(&self, _instance: AppInstance) -> Result<AppInstance> {
     unimplemented!()
   }
 }
 
 impl ContainerTrait for DockerCompose {
   /// This will find a list of apps with configurations that the container knows about
-  fn find_all(&self, query: AppQuery) -> Result<Vec<AppInstance>> {
-    match Action::Find(query).run(self.clone())? {
-      ActionResult::FindResult(result) => Ok(result),
-      _ => unreachable!("Should only have FindAppResults returned from the FindApp action"),
-    }
+  fn find(&self, query: AppQuery) -> Result<Vec<AppInstance>> {
+    let conf = self.get_conf()?;
+    Ok(
+      conf
+        .list_service_names()
+        .into_iter()
+        .filter_map(|item| match item.to_lowercase() == query.name {
+          false => None,
+          true => Some(AppInstance::new(item)),
+        })
+        .collect(),
+    )
   }
 
   /// List the known items in the app cache
   fn cached_apps(&self) -> Result<Vec<AppInstance>> {
     unimplemented!("No App Cache for Bash Yet")
+  }
+
+  /// Send the message to a child item
+  fn forward(&self, to: AppInstance, message: Vec<String>) -> Result<String> {
+    log::debug!("Sending message to {}:\n{:#?}", to.name, message);
+    Ok("message_received".to_string())
   }
 
   /// Get the name/version of the container, usually for use in logging/errors.
@@ -96,7 +113,16 @@ impl DockerCompose {
     }
   }
 
-  /// Load the
+  fn get_conf(&self) -> Result<Schema> {
+    match self.config.clone() {
+      Some(conf) => Ok(conf),
+      None => Err(FoundryError::ConfigurationError).context(
+        "Docker Compose does not have a loaded configuration. Make sure DockerCompose::load is used first"
+      )?,
+    }
+  }
+
+  /// Load the configuration from an existing yaml file
   pub fn load(&self, config_file: String) -> Result<DockerCompose> {
     log::debug!("reading the docker compose schema");
 
@@ -105,68 +131,67 @@ impl DockerCompose {
       "Failed to open docker-compose file at {}",
       config_file
     ))?;
-    let config = serde_yaml::from_str(&contents).context(format!(
-      "Failed to parse the docker-compose file at {}",
-      config_file
-    ))?;
+
+    let conf = Schema {
+      source: Some(config_file.clone()),
+      ..serde_yaml::from_str(&contents).context(format!(
+        "Failed to parse the docker-compose file at {}",
+        config_file
+      ))?
+    };
 
     log::debug!("Successfully parsed the schema at {}", config_file,);
-    //     // let config = dc::File::read_from_path(std::path::Path::new(config_file));
 
+    log::debug!("Getting the docker containers");
+    let mut containers = HashMap::new();
+    for name in conf.list_service_names() {
+      containers.insert(name.clone(), self.define_container(name)?);
+    }
+
+    log::debug!("Returning the compose");
     Ok(DockerCompose {
-      config: Some(config),
+      config: Some(conf),
+      containers,
       ..self.clone()
     })
   }
 
-  pub fn get_container(&self, name: String) -> Result<DockerContainer> {
-    unimplemented!()
+  /// Private function used to build a container from the schema
+  /// TODO: Add in result from "docker inspect" if running
+  /// TODO: If status is "Up", we want to get/set shell
+  fn define_container(&self, name: String) -> Result<DockerContainer> {
+    let instance = AppInstance::new(name.clone());
+    DockerContainer::build(instance, Some(Rc::new(self.clone())))
   }
+
+  /// Set the status of all the services that this instance knows about
+  fn _update_status(&mut self, _name: String) -> Result<()> {
+    Ok(())
+  }
+
+  pub fn run_action(&self, action: Action) -> Result<ActionResult> {
+    action.run(self.clone())
+  }
+
+  pub fn get_container(&self, name: String) -> Result<DockerContainer> {
+    match self.containers.get(&name) {
+      Some(container) => Ok(container.clone()),
+      None => {
+        let conf = self
+          .get_conf()
+          .context("Failed to run DockerCompose::get_container")?;
+        Err(FoundryError::NotFound).context(format!(
+          "Docker Compose does not have a service named '{}' in conf at '{}'. Possible choices are: {:#?} ",
+          name,
+          conf.get_source(),
+          conf.list_service_names(),
+        ))
+      }
+    }
+  }
+
+  // Cli functions will go here
 }
-
-// impl super::BackupTrait for DockerCompose {
-//   fn run_init(conf: super::BackupConfig) -> Result<(), Error> {
-//     log::debug!("Checking for path");
-//     log::debug!("Checking volumes");
-//     log::debug!("");
-//     log::debug!("");
-//     log::debug!("");
-//     unimplemented!("No Run Init");
-//   }
-//   fn run_backup(conf: super::BackupConfig) -> Result<(), Error> {
-//     unimplemented!("No Run Backup");
-//   }
-//   fn run_cleanup(conf: super::BackupConfig) -> Result<(), Error> {
-//     unimplemented!("No Run Cleanup");
-//   }
-// }
-
-// impl ApplicationTrait for DockerCompose {
-//   fn get_schema(&self) -> Result<String, Error> {
-//     unimplemented!("No schema for docker compose yet");
-//   }
-
-//   fn find_exe(&self, shell: Box<dyn ContainerTrait>) -> Result<String, Error> {
-//     // NOTE: This seems that it should pull out to a Sh module
-//   }
-
-//   fn get_version(&self, exe: String) -> Result<String, Error> {
-//     log::debug!("exe:\n{:#?}", exe);
-//     let result = Command::new(exe).args(&["-v"]).output();
-//     match result {
-//       Ok(output) => Ok(
-//         String::from_utf8(output.stdout)?
-//           .trim_start_matches("docker-compose version")
-//           .trim()
-//           .to_string(),
-//       ),
-//       Err(err) => {
-//         log::warn!("Could not find local executable for {}", err);
-//         Err(Error::ApplicationError(format!("{}", err)))
-//       }
-//     }
-//   }
-// }
 
 // Let examine messages for the foundry for communicating rather than directly returning values
 #[derive(Clone, Debug, JsonSchema, Serialize, Deserialize)]
@@ -177,9 +202,7 @@ pub enum Event {
   BuildComplete,
 }
 
-type FindApp = AppQuery;
-
-/// The actions exposed via API
+/// The actions registered to the system.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Action {
   Find(FindApp),
@@ -197,30 +220,30 @@ pub enum ActionResult {
 
 impl Action {
   fn run(&self, compose: DockerCompose) -> Result<ActionResult> {
-    // We shouldn't be able to run anything without a valid configuration
-    let conf = match &compose.config {
-      Some(conf) => conf,
-      None => Err(FoundryError::ConfigurationError).context(format!(
-        "Docker Compose tried to run action {:#?} without a valid config",
-        self
-      ))?,
-    };
-
     match self {
       Action::Export => unimplemented!("Next up, Export"),
-      Action::Find(query) => {
-        let services = conf
-          .list_service_names()
-          .into_iter()
-          .filter_map(|item| match item.to_lowercase() == query.name {
-            false => None,
-            true => Some(AppInstance::new(item)),
-          })
-          .collect();
-
-        Ok(ActionResult::FindResult(services))
-      }
+      Action::Find(query) => match query.0.find_all {
+        true => Ok(ActionResult::FindResult(compose.find(query.0.clone())?)),
+        false => Ok(ActionResult::FindResult(vec![
+          compose.find_one(query.0.clone())?
+        ])),
+      },
     }
+  }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FindApp(AppQuery);
+
+impl ActionTrait for FindApp {
+  type RESPONSE = ActionResult;
+
+  fn run(&self, target: AppInstance) -> Result<Self::RESPONSE> {
+    unimplemented!("Still haven't figured out Actions yet")
+  }
+
+  fn to_string(&self, _target: AppInstance) -> Result<Vec<String>> {
+    unimplemented!("ActionTrait not implemented for shell")
   }
 }
 

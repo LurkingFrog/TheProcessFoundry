@@ -2,9 +2,16 @@
 //!
 //! After getting lost in the weeds, this is all the things that I seem to see come up as useful in every
 //! application and conatainer
+//!
+//! # THINK: Additional traits
+//!   - Actionable: Possibly part of app trait, since all should be able to utilize and emit Actions/Events
+//!   - ActionResult: To abstract the result so we can pass it to something that has the code to actually use
+//!   - Routable (possibly part of action)
+//!   - consider https://abronan.com/rust-trait-objects-box-and-rc/ - Arc<Mutex<impl trait>>
 
 use anyhow::{Context, Result};
 use serde_derive::{Deserialize, Serialize};
+use std::rc::Rc;
 
 use super::Bash;
 use super::FoundryError;
@@ -13,7 +20,7 @@ use super::FoundryError;
 pub trait AppTrait {
   /// Construct the metadata for the module controlling the app instance
   /// This is important to make sure the module aligns with the actual installed instance
-  fn build(instance: AppInstance) -> Result<Self>
+  fn build(instance: AppInstance, parent: Option<Rc<dyn ContainerTrait>>) -> Result<Self>
   where
     Self: Sized;
 
@@ -21,21 +28,25 @@ pub trait AppTrait {
   fn get_name(&self) -> String;
 
   /// Knows how to get the version number of the installed app (not the module version)
-  fn set_version(instance: AppInstance) -> Result<AppInstance>;
+  fn set_version(&self, instance: AppInstance) -> Result<AppInstance>;
 
   /// Figures out how to call the cli using the given container
   /// THINK: is it better to have an option or make "Local" a special case?
-  fn set_cli(instance: AppInstance, container: Box<dyn ContainerTrait>) -> Result<AppInstance>;
+  fn set_cli(
+    &self,
+    instance: AppInstance,
+    container: Rc<dyn ContainerTrait>,
+  ) -> Result<AppInstance>;
 }
 
 /// Ways to manage applications (eg Docker, Bash) contained within itself
-pub trait ContainerTrait {
+pub trait ContainerTrait: std::fmt::Debug {
   /// This will find a list of apps with configurations that the container knows about
-  fn find_all(&self, query: AppQuery) -> Result<Vec<AppInstance>>;
+  fn find(&self, query: AppQuery) -> Result<Vec<AppInstance>>;
 
   /// Find a unique app that matches the query
   fn find_one(&self, query: AppQuery) -> Result<AppInstance> {
-    let all = self.find_all(query.clone())?;
+    let all = self.find(query.clone())?;
     match all.len() {
       0 => Err(FoundryError::NotFound).context(format!(
           "No instances matching your query of {} have been registered",
@@ -48,6 +59,8 @@ pub trait ContainerTrait {
       )),
     }
   }
+
+  fn forward(&self, to: AppInstance, message: Vec<String>) -> Result<String>;
 
   /// List the known items in the app cache
   fn cached_apps(&self) -> Result<Vec<AppInstance>>;
@@ -84,7 +97,7 @@ pub struct AppQuery {
 
   pub aliases: Option<Vec<String>>,
 
-  // Searches high and low for apps that match the criteria. If false (default) it returns only the first item found
+  // Searches high and low for apps that match the criteria. If false it returns an error with multiple matches.
   pub find_all: bool,
 }
 
@@ -210,6 +223,15 @@ impl Shell {
   }
 }
 
+// /// An interface to accept actions and events
+// THINK: Part of the spawned app trait? How to make this generic so the registry/router knows how to deal with it without
+// pub trait Actionable {
+//   fn run_action(&self, act: Box<dyn ActionTrait>) -> ActionResponse;
+// }
+
+/// Handlers for serialized action requests
+///
+/// THINK: Should there be a send/receive?
 pub trait ActionTrait {
   type RESPONSE;
 
