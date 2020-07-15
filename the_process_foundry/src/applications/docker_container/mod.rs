@@ -3,6 +3,7 @@
 //! This is going to use shiplift since they seem to have done most of the work already.
 //! This is independent of docker because there are multiple ways of manipulating these (docker,
 //! docker-compose, etc.) so we're going to make a specific container to hold the metadata.
+//! THINK: Should this assume it is clean (freshly spun up) or can it be dirty?
 
 const APP_NAME: &str = "Docker Container";
 const MODULE_VERSION: &'static str = env!("CARGO_PKG_VERSION");
@@ -58,7 +59,7 @@ impl DockerContainer {
     })
   }
 
-  /// Set
+  /// Find and verify the shell on the container
   pub fn set_shell(&self, preferred: Option<AppQuery>) -> Result<DockerContainer> {
     let query = preferred.unwrap_or(AppQuery::new("bash".to_string()));
 
@@ -174,22 +175,22 @@ impl ContainerTrait for DockerContainer {
       },
     )?;
 
-    let cmd: Vec<String> = match name {
-      "bash" => vec![
-        "bash".to_string(),
-        "-c".to_string(),
-        "command".to_string(),
-        "-v".to_string(),
-        query.name.clone(),
-      ],
+    let cmd = match name {
+      "bash" => Ok(Message::Command(Cmd {
+        command: "bash".to_string(),
+        args: ["-c", &format!("command -v {}", query.name)]
+          .iter()
+          .map(|x| x.to_string())
+          .collect(),
+      })),
       _ => Err(FoundryError::UnexpectedValue).context(format!(
         "Docker containers are not currently set to use '{}' shells",
         name
-      ))?,
-    };
+      )),
+    }?;
 
     let result = parent.forward(self.instance.clone(), cmd)?;
-
+    log::debug!("Forward result:\n{:#?}", result);
     unimplemented!()
   }
 
@@ -198,7 +199,7 @@ impl ContainerTrait for DockerContainer {
     unimplemented!("No App Cache for Bash Yet")
   }
 
-  fn forward(&self, to: AppInstance, message: Vec<String>) -> Result<String> {
+  fn forward(&self, to: AppInstance, message: Message) -> Result<String> {
     unimplemented!("No ContainerTrait::forward yet")
   }
 
@@ -224,7 +225,7 @@ pub enum ActionResult {
 }
 
 impl Action {
-  fn run(&self, container: DockerContainer) -> Result<ActionResult> {
+  fn _run(&self, container: DockerContainer) -> Result<ActionResult> {
     // We shouldn't be able to run anything without a valid configuration
     // let conf = match &compose.config {
     //   Some(conf) => conf,
@@ -254,7 +255,7 @@ impl ActionTrait for FindApp {
     unimplemented!()
   }
 
-  fn to_string(&self, _target: AppInstance) -> Result<Vec<String>> {
+  fn to_string(&self, _target: Option<AppInstance>) -> Result<String> {
     unimplemented!("ActionTrait not implemented for shell")
   }
 }
@@ -269,7 +270,7 @@ impl ActionTrait for InspectOptions {
     unimplemented!()
   }
 
-  fn to_string(&self, _target: AppInstance) -> Result<Vec<String>> {
+  fn to_string(&self, _target: Option<AppInstance>) -> Result<String> {
     unimplemented!("ActionTrait not implemented for shell")
   }
 }

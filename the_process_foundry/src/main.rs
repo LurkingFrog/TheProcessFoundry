@@ -29,7 +29,7 @@ pub fn find(container: Rc<dyn ContainerTrait>, app_name: String) -> Result<AppIn
     let query = AppQuery::new(app_name.clone());
     let instance = container
         .find_one(query)
-        .context(format!("Could not find the {} in bootstrap", app_name))?;
+        .context(format!("Could not find {} in bootstrap", app_name))?;
     Ok(instance)
 }
 
@@ -57,7 +57,7 @@ pub fn bootstrap() -> Result<()> {
 
     // Find PG Backup on Postgres
     log::debug!("About to find the pg_backup");
-    let pg_backup = find(pg_container.clone(), "pg_backup".to_string())?;
+    let pg_backup = find(pg_container.clone(), "pg_basebackup".to_string())?;
     log::debug!("pg_backup:\n{:#?}", pg_backup);
 
     // Get the local filesystem

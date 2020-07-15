@@ -14,7 +14,7 @@ use std::rc::Rc;
 use super::schema::*;
 use super::FoundryError;
 use super::{docker_container, DockerContainer};
-use super::{ActionTrait, AppInstance, AppQuery, AppTrait, ContainerTrait};
+use super::{ActionTrait, AppInstance, AppQuery, AppTrait, Cmd, ContainerTrait, Message};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DockerCompose {
@@ -85,9 +85,26 @@ impl ContainerTrait for DockerCompose {
   }
 
   /// Send the message to a child item
-  fn forward(&self, to: AppInstance, message: Vec<String>) -> Result<String> {
-    log::debug!("Sending message to {}:\n{:#?}", to.name, message);
-    Ok("message_received".to_string())
+  fn forward(&self, to: AppInstance, message: Message) -> Result<String> {
+    match message {
+      Message::Command(cmd) => {
+        let exec = ExecOptions {
+          service_name: to.name,
+          command: cmd.command,
+          args: cmd.args,
+          ..Default::default()
+        };
+        match exec.run(self.instance.clone())? {
+          ActionResult::Exec(val) => Ok(val),
+          err => Err(FoundryError::UnexpectedValue).context(format!(
+            "Running DockerCompose::ExecOptions did not return an ExecResult:\n{:#?}",
+            err
+          )),
+        }
+      }
+      _ => Err(FoundryError::UnexpectedValue)
+        .context("Docker Compose tried to forward a non-command to a container"),
+    }
   }
 
   /// Get the name/version of the container, usually for use in logging/errors.
@@ -143,17 +160,25 @@ impl DockerCompose {
     log::debug!("Successfully parsed the schema at {}", config_file,);
 
     log::debug!("Getting the docker containers");
-    let mut containers = HashMap::new();
+    let containers = HashMap::new();
+    let mut new_compose = DockerCompose {
+      config: Some(conf.clone()),
+      containers,
+      instance: AppInstance {
+        config_file: Some(config_file.clone()),
+        ..self.instance.clone()
+      },
+      ..self.clone()
+    };
+
     for name in conf.list_service_names() {
-      containers.insert(name.clone(), self.define_container(name)?);
+      new_compose
+        .containers
+        .insert(name.clone(), new_compose.define_container(name)?);
     }
 
     log::debug!("Returning the compose");
-    Ok(DockerCompose {
-      config: Some(conf),
-      containers,
-      ..self.clone()
-    })
+    Ok(new_compose)
   }
 
   /// Private function used to build a container from the schema
@@ -206,6 +231,8 @@ pub enum Event {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Action {
   Find(FindApp),
+  // Run the exec command against a running container
+  Exec(ExecOptions),
   /// Dump the configuration to the given file location. Useful for adding volumes/ports on the fly
   Export,
 }
@@ -216,6 +243,7 @@ pub enum ActionResult {
   // Run(RunResult),
   FindResult(Vec<AppInstance>),
   ListServices(Vec<String>),
+  Exec(String),
 }
 
 impl Action {
@@ -228,6 +256,7 @@ impl Action {
           compose.find_one(query.0.clone())?
         ])),
       },
+      Action::Exec(opts) => opts.run(compose.instance.clone()),
     }
   }
 }
@@ -238,11 +267,68 @@ pub struct FindApp(AppQuery);
 impl ActionTrait for FindApp {
   type RESPONSE = ActionResult;
 
-  fn run(&self, target: AppInstance) -> Result<Self::RESPONSE> {
+  fn run(&self, _target: AppInstance) -> Result<Self::RESPONSE> {
     unimplemented!("Still haven't figured out Actions yet")
   }
 
-  fn to_string(&self, _target: AppInstance) -> Result<Vec<String>> {
+  fn to_string(&self, _target: Option<AppInstance>) -> Result<String> {
+    unimplemented!("ActionTrait not implemented for shell")
+  }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ExecOptions {
+  command: String,
+  args: Vec<String>,
+  service_name: String,
+  detach: bool,
+  privileged: bool,
+  index: Option<u8>,
+  user: Option<String>,
+  env: Option<HashMap<String, String>>,
+  workdir: Option<String>,
+}
+
+impl ExecOptions {
+  pub fn new(service_name: String, command: String) -> ExecOptions {
+    ExecOptions {
+      service_name,
+      command,
+      ..Default::default()
+    }
+  }
+}
+
+impl ActionTrait for ExecOptions {
+  type RESPONSE = ActionResult;
+
+  fn run(&self, compose: AppInstance) -> Result<Self::RESPONSE> {
+    // TODO: change this to use the instance path
+    let mut cmd = std::process::Command::new(format!("/usr/local/bin/{}", compose.name));
+    match compose.config_file {
+      Some(path) => cmd.arg("-f").arg(path.clone()),
+      // TODO: Actually make the write function exist
+      None => Err(FoundryError::ConfigurationError).context(
+        "Docker Compose does not configuration file. TODO: Use DockerCompose::write to create one",
+      )?,
+    };
+    cmd.arg("exec").arg("-T").arg(self.service_name.clone());
+    cmd.arg(self.command.clone());
+    cmd.args(&self.args);
+    log::debug!("cmd:\n{:#?}", cmd);
+    let result = cmd.arg("").output()?;
+    log::debug!("result:\n{:#?}", result);
+    match result.status.success() {
+      true => Ok(ActionResult::Exec(
+        String::from_utf8(result.stdout)?.trim_end().to_string(),
+      )),
+      false => {
+        Err(FoundryError::RemoteError).context("Received an error trying to run in docker compose")
+      }
+    }
+  }
+
+  fn to_string(&self, _target: Option<AppInstance>) -> Result<String> {
     unimplemented!("ActionTrait not implemented for shell")
   }
 }

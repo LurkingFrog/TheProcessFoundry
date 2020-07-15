@@ -80,8 +80,12 @@ impl AppTrait for Bash {
 impl ContainerTrait for Bash {
   /// This will find a list of apps with configurations that the container knows about
   fn find(&self, query: AppQuery) -> Result<Vec<AppInstance>> {
-    match Action::FindApp(query).run(self.clone())? {
-      ActionResult::FindAppResult(result) => Ok(result),
+    match Action::FindApp(FindAppQuery(query)).run(self.clone())? {
+      ActionResult::FindApp(result) => Ok(result),
+      x => Err(FoundryError::Unreachable).context(format!(
+        "Received a non-FindApp Result from Bash::find:\n{:#?}",
+        x
+      )),
     }
   }
 
@@ -90,7 +94,7 @@ impl ContainerTrait for Bash {
     unimplemented!("No App Cache for Bash Yet")
   }
 
-  fn forward(&self, to: AppInstance, message: Vec<String>) -> Result<String> {
+  fn forward(&self, to: AppInstance, message: Message) -> Result<String> {
     unimplemented!("No ContainerTrait::forward yet")
   }
 
@@ -100,12 +104,16 @@ impl ContainerTrait for Bash {
   }
 }
 
-type FindApp = AppQuery;
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Action {
   Run(RunOptions),
-  FindApp(FindApp),
+  FindApp(FindAppQuery),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ActionResult {
+  Run(RunResult),
+  FindApp(Vec<AppInstance>),
 }
 
 // TODO: Make a derive for this
@@ -118,35 +126,76 @@ impl Action {
   }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ActionResult {
-  // Run(RunResult),
-  FindAppResult(Vec<AppInstance>),
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+pub struct RunOptions {
+  pub command: String,
+  pub args: Vec<String>,
 }
 
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
-pub struct RunOptions {}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RunResult(String);
 
-impl ActionTrait for FindApp {
+impl ActionTrait for RunOptions {
+  type RESPONSE = ActionResult;
+
+  fn run(&self, _target: AppInstance) -> Result<Self::RESPONSE> {
+    let result = Command::new(&self.command).args(&self.args).output();
+
+    // This should be another command based on ActionDefinition
+    // TODO: Figure out how errors are returned (stderr vs stdout)
+    match result {
+      Ok(output) => Ok(ActionResult::Run(RunResult(String::from_utf8(
+        output.stdout,
+      )?))),
+      Err(err) => {
+        let msg = format!(
+          "Error running the command:\n\tcmd: {:#?}\n\terr: {:#?}",
+          self, err,
+        );
+        log::warn!("{}", msg);
+        Err(FoundryError::UnhandledError).context(msg)
+      }
+    }
+  }
+
+  fn to_string(&self, _target: Option<AppInstance>) -> Result<String> {
+    let mut cmd = self.command.clone();
+    for arg in self.args.clone() {
+      cmd.push_str(" ");
+      cmd.push_str(&arg);
+    }
+
+    // TODO: change this to use target.CliAccess.path instead of bash
+    Ok(format!("bash -c '{}'", cmd))
+  }
+}
+
+/// Configuration to look up an application in this container
+/// TODO: Add a macro to map all the functions to the parent AppQuery
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FindAppQuery(AppQuery);
+
+impl ActionTrait for FindAppQuery {
   type RESPONSE = ActionResult;
   /// Find the first app that matches the conditions of AppDefinition (name, version,  path, etc)
+  /// TODO: Convert this to reuse "Run"
   fn run(&self, target: AppInstance) -> Result<Self::RESPONSE> {
     let result = Command::new("bash")
-      .args(&["-c", &format!("command -v {}", self.name)])
+      .args(&["-c", &format!("command -v {}", self.0.name)])
       .output();
 
     // THis should be another command based on ActionDefinition
     match result {
       Ok(_output) => {
         // TODO: Set the networking/cli in the AppInstance
-        let app = AppInstance::new(self.name.clone());
-        Ok(ActionResult::FindAppResult(vec![app]))
+        let app = AppInstance::new(self.0.name.clone());
+        Ok(ActionResult::FindApp(vec![app]))
       }
       Err(_err) => {
         let msg = format!(
           "{} could not find local executable for {}",
           target.full_name(),
-          self.name,
+          self.0.name,
         );
         log::warn!("{}", msg);
         Err(FoundryError::NotFound).context(msg)
@@ -154,7 +203,7 @@ impl ActionTrait for FindApp {
     }
   }
 
-  fn to_string(&self, _target: AppInstance) -> Result<Vec<String>> {
-    unimplemented!("ActionTrait not implemented for shell")
+  fn to_string(&self, _target: Option<AppInstance>) -> Result<String> {
+    unimplemented!("ActionTrait not implemented for Bash::FindApp::to_string")
   }
 }

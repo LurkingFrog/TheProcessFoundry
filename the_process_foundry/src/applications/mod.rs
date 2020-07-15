@@ -2,7 +2,7 @@
 
 use super::FoundryError;
 use super::{ActionTrait, AppTrait, ContainerTrait, LocalTrait};
-use super::{AppInstance, AppQuery};
+use super::{AppInstance, AppQuery, Cmd, Message};
 
 pub mod bash;
 // pub mod docker;

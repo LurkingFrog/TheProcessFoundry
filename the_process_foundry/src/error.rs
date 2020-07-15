@@ -28,6 +28,9 @@ pub enum FoundryError {
   #[error("The item you were looking for was not found")]
   NotFound,
 
+  #[error("The command sent to the container caused an error")]
+  RemoteError,
+
   #[error("The value received doesn't appear to match the expected format")]
   UnexpectedValue,
 

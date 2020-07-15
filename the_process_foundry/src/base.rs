@@ -39,6 +39,17 @@ pub trait AppTrait {
   ) -> Result<AppInstance>;
 }
 
+// THINK: This is very specific to forwarding to shell. Is there a better way?
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Cmd {
+  pub command: String,
+  pub args: Vec<String>,
+}
+
+pub enum Message {
+  Command(Cmd),
+}
+
 /// Ways to manage applications (eg Docker, Bash) contained within itself
 pub trait ContainerTrait: std::fmt::Debug {
   /// This will find a list of apps with configurations that the container knows about
@@ -60,7 +71,8 @@ pub trait ContainerTrait: std::fmt::Debug {
     }
   }
 
-  fn forward(&self, to: AppInstance, message: Vec<String>) -> Result<String>;
+  /// Send a stringified action to the AppInstance
+  fn forward(&self, to: AppInstance, message: Message) -> Result<String>;
 
   /// List the known items in the app cache
   fn cached_apps(&self) -> Result<Vec<AppInstance>>;
@@ -141,6 +153,8 @@ pub struct AppInstance {
   /// The version of the Foundry code running
   /// NOTE: This will be much more important once TPF becomes distributed microservices
   pub module_version: Option<semver::Version>,
+
+  pub config_file: Option<String>,
 
   // pub codebase: Option<Box<dyn AppTrait>>,
   pub cli: Option<CliAccess>,
@@ -241,7 +255,7 @@ pub trait ActionTrait {
   // Convert this action into a std::process::Command style vector to be run in a place where the
   // foundry cannot directly access (like a docker container)
   // THINK: To string doesn't make as much sense for network/api calls
-  fn to_string(&self, target: AppInstance) -> Result<Vec<String>>;
+  fn to_string(&self, target: Option<AppInstance>) -> Result<String>;
 
   // This is a long term goal, be able to generate stand-alone scripts based on the container actions
   // fn to_file(&self, application: Box<dyn AppTrait>) -> Result<String, Error>;
