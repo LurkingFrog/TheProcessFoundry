@@ -1,6 +1,9 @@
 //! Use and manage Bash shell
 //!
 //! This is essentially my hello world application and using it as a stalking horse for finding user stories
+//! THINK: Considering to change this to a generic unix shell with a plugin for specific type (Bash, ZSH),
+//!        since they seem to be common with the differences coming from the scripting and interactive
+//!        portions
 
 const APP_NAME: &str = "Bash";
 const MODULE_VERSION: &'static str = env!("CARGO_PKG_VERSION");
@@ -158,15 +161,14 @@ impl ActionTrait for RunOptions {
     }
   }
 
-  fn to_string(&self, _target: Option<AppInstance>) -> Result<String> {
-    let mut cmd = self.command.clone();
-    for arg in self.args.clone() {
-      cmd.push_str(" ");
-      cmd.push_str(&arg);
-    }
-
+  fn to_message(&self, _target: Option<AppInstance>) -> Result<Vec<Message>> {
+    let message = Message::Command(Cmd {
+      run_as: None,
+      command: self.command.clone(),
+      args: self.args.clone(),
+    });
     // TODO: change this to use target.CliAccess.path instead of bash
-    Ok(format!("bash -c '{}'", cmd))
+    Ok(vec![message])
   }
 }
 
@@ -203,7 +205,7 @@ impl ActionTrait for FindAppQuery {
     }
   }
 
-  fn to_string(&self, _target: Option<AppInstance>) -> Result<String> {
+  fn to_message(&self, _target: Option<AppInstance>) -> Result<Vec<Message>> {
     unimplemented!("ActionTrait not implemented for Bash::FindApp::to_string")
   }
 }

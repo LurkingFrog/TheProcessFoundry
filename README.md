@@ -26,6 +26,10 @@ I'm doing the proof of concept on two use cases:
 Too many to list. I'm currently implementing a continuous Postgres backup system to hammer out my ideas.
 I'll start tracking these once I'm through the Proof of Concept phase.
 
+## Future research
+
+https://github.com/google/tarpc - Remote Process Call (RPC) framework
+
 ## FAQ
 
 - **I don't write rust, can I still use this?**

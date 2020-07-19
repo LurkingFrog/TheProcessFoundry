@@ -177,6 +177,7 @@ impl ContainerTrait for DockerContainer {
 
     let cmd = match name {
       "bash" => Ok(Message::Command(Cmd {
+        run_as: None,
         command: "bash".to_string(),
         args: ["-c", &format!("command -v {}", query.name)]
           .iter()
@@ -189,9 +190,9 @@ impl ContainerTrait for DockerContainer {
       )),
     }?;
 
-    let result = parent.forward(self.instance.clone(), cmd)?;
-    log::debug!("Forward result:\n{:#?}", result);
-    unimplemented!()
+    let location = parent.forward(self.instance.clone(), cmd)?;
+    Ok(vec![AppInstance::new(query.name.clone())
+      .set_command_path(Some(Rc::new(self.clone())), location)?])
   }
 
   /// List the known items in the app cache
@@ -199,8 +200,15 @@ impl ContainerTrait for DockerContainer {
     unimplemented!("No App Cache for Bash Yet")
   }
 
-  fn forward(&self, to: AppInstance, message: Message) -> Result<String> {
-    unimplemented!("No ContainerTrait::forward yet")
+  fn forward(&self, _to: AppInstance, message: Message) -> Result<String> {
+    // Just send it along to
+    match &self.parent {
+      None => Err(FoundryError::NotConfigured).context(format!(
+        "Parent isn't set up for forwarding on container {}",
+        self.instance.name
+      )),
+      Some(x) => x.forward(self.instance.clone(), message),
+    }
   }
 
   /// Get the name/version of the container, usually for use in logging/errors.
@@ -255,7 +263,7 @@ impl ActionTrait for FindApp {
     unimplemented!()
   }
 
-  fn to_string(&self, _target: Option<AppInstance>) -> Result<String> {
+  fn to_message(&self, target: Option<AppInstance>) -> Result<Vec<Message>> {
     unimplemented!("ActionTrait not implemented for shell")
   }
 }
@@ -270,7 +278,7 @@ impl ActionTrait for InspectOptions {
     unimplemented!()
   }
 
-  fn to_string(&self, _target: Option<AppInstance>) -> Result<String> {
+  fn to_message(&self, target: Option<AppInstance>) -> Result<Vec<Message>> {
     unimplemented!("ActionTrait not implemented for shell")
   }
 }

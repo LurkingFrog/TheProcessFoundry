@@ -39,17 +39,6 @@ pub trait AppTrait {
   ) -> Result<AppInstance>;
 }
 
-// THINK: This is very specific to forwarding to shell. Is there a better way?
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Cmd {
-  pub command: String,
-  pub args: Vec<String>,
-}
-
-pub enum Message {
-  Command(Cmd),
-}
-
 /// Ways to manage applications (eg Docker, Bash) contained within itself
 pub trait ContainerTrait: std::fmt::Debug {
   /// This will find a list of apps with configurations that the container knows about
@@ -138,10 +127,10 @@ impl AppQuery {
 /// This is a synthesis of both introspected information (version) and external (ip address/port)
 /// THINK: Should this identify the environment?
 /// THINK: Should the app instance know itself/functions?
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 pub struct AppInstance {
   /// This is for use by Containers enumerating instances of their content
-  pub process_id: Option<String>,
+  pub instance_id: Option<String>,
 
   /// The standard name for this app (e.g. Postgres, DockerCompose)
   pub name: String,
@@ -175,12 +164,73 @@ impl AppInstance {
       None => format!("{} ({})", self.name, "Unknown Version"),
     }
   }
+
+  pub fn set_command_path(
+    &self,
+    container: Option<Rc<dyn ContainerTrait>>,
+    path: String,
+  ) -> Result<AppInstance> {
+    let cli = self.cli.clone().map_or(
+      CliAccess {
+        path: path.clone(),
+        container: container.clone(),
+      },
+      |cli| CliAccess {
+        path: path.clone(),
+        ..cli.clone()
+      },
+    );
+
+    Ok(AppInstance {
+      cli: Some(cli),
+      ..self.clone()
+    })
+  }
+
+  pub fn get_command_path(&self) -> Result<String> {
+    match &self.cli {
+      None => Err(FoundryError::NotConfigured).context(format!("Cli is not set for {}", self.name)),
+      Some(cli) => Ok(cli.path.clone()),
+    }
+  }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+impl std::fmt::Debug for AppInstance {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(
+      f,
+      "AppInstance {{
+        name: {},
+        version: {:#?},
+        config_file: {:#?},
+        cli: {}
+        network: {}
+      }}",
+      self.name,
+      self.version,
+      self.config_file,
+      self
+        .cli
+        .clone()
+        .map_or("None".to_string(), |cli| cli.path.clone()),
+      self.api.clone().map_or("None", |_net| {
+        "Networking not implemented yet for AppInstance"
+      }),
+    )
+  }
+}
+
+impl std::fmt::Display for AppInstance {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "AppInstance {} ({:#?})", self.name, self.version)
+  }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CliAccess {
   /// The container where this App is found
-  pub container_id: Option<uuid::Uuid>,
+  #[serde(skip)]
+  pub container: Option<Rc<dyn ContainerTrait>>,
 
   /// The location of the executable
   pub path: String,
@@ -200,10 +250,11 @@ pub enum ShellType {
 
 /// A special case for bootstrapping. I'm trying to find the enumerations that actually deserve to be
 /// traits themselves
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct Shell {
   pub shell_type: ShellType,
   pub instance: AppInstance,
+  pub running: Rc<dyn ContainerTrait>,
 }
 
 impl Shell {
@@ -225,23 +276,43 @@ impl Shell {
       }
     };
 
-    let instance = match shell_type {
-      ShellType::Bash => Bash::get_local().context("Could not get a local Bash shell")?,
+    let (instance, running) = match shell_type {
+      ShellType::Bash => {
+        let instance = Bash::get_local().context("Could not get a local Bash shell")?;
+        (instance.clone(), Rc::new(Bash::build(instance, None)?))
+      }
       _ => unreachable!("Should currently not be able to use any local shell other than bash"),
     };
 
     Ok(Shell {
       instance,
       shell_type,
+      running,
     })
   }
 }
 
-// /// An interface to accept actions and events
-// THINK: Part of the spawned app trait? How to make this generic so the registry/router knows how to deal with it without
-// pub trait Actionable {
-//   fn run_action(&self, act: Box<dyn ActionTrait>) -> ActionResponse;
-// }
+// THINK: This is very specific to forwarding to shell and is more like a script. Does this belong with
+//        the future workflows?
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Cmd {
+  pub run_as: Option<String>,
+  pub command: String,
+  pub args: Vec<String>,
+}
+
+///  A generic message designed to be sent to a container
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Message {
+  /// For use in a remote shell, like one contained within a docker container
+  Command(Cmd),
+
+  /// Build an Rpc call
+  Rpc,
+
+  /// Call a Restful API
+  Rest,
+}
 
 /// Handlers for serialized action requests
 ///
@@ -253,9 +324,9 @@ pub trait ActionTrait {
   fn run(&self, target: AppInstance) -> Result<Self::RESPONSE>;
 
   // Convert this action into a std::process::Command style vector to be run in a place where the
-  // foundry cannot directly access (like a docker container)
-  // THINK: To string doesn't make as much sense for network/api calls
-  fn to_string(&self, target: Option<AppInstance>) -> Result<String>;
+  // foundry cannot directly access (like inside docker container)
+  // THINK: Should run just naturally use this when the target is remote?
+  fn to_message(&self, target: Option<AppInstance>) -> Result<Vec<Message>>;
 
   // This is a long term goal, be able to generate stand-alone scripts based on the container actions
   // fn to_file(&self, application: Box<dyn AppTrait>) -> Result<String, Error>;

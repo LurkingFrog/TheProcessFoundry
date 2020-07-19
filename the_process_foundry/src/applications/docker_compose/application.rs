@@ -90,6 +90,7 @@ impl ContainerTrait for DockerCompose {
       Message::Command(cmd) => {
         let exec = ExecOptions {
           service_name: to.name,
+          user: cmd.run_as.clone(),
           command: cmd.command,
           args: cmd.args,
           ..Default::default()
@@ -271,7 +272,7 @@ impl ActionTrait for FindApp {
     unimplemented!("Still haven't figured out Actions yet")
   }
 
-  fn to_string(&self, _target: Option<AppInstance>) -> Result<String> {
+  fn to_message(&self, target: Option<AppInstance>) -> Result<Vec<Message>> {
     unimplemented!("ActionTrait not implemented for shell")
   }
 }
@@ -299,12 +300,21 @@ impl ExecOptions {
   }
 }
 
+// "/usr/local/bin/docker-compose" "-f" "/home/dfogelson/Foundry/TheProcessFoundry/the_process_foundry/tests/data/postgres.docker-compose.yml" "exec" "-T" "postgres" "bash" "-c" "command -v pg_basebackup"
+fn command_str(command: &std::process::Command) -> Result<String> {
+  let cmd = format!("{:#?}", command);
+  let regex = regex::Regex::new(r#"(^\s*")|(" ")|("\s*$)"#)?;
+  Ok(regex.replace_all(&cmd, " ").to_string())
+}
+
 impl ActionTrait for ExecOptions {
   type RESPONSE = ActionResult;
 
   fn run(&self, compose: AppInstance) -> Result<Self::RESPONSE> {
     // TODO: change this to use the instance path
     let mut cmd = std::process::Command::new(format!("/usr/local/bin/{}", compose.name));
+
+    // Add the option args
     match compose.config_file {
       Some(path) => cmd.arg("-f").arg(path.clone()),
       // TODO: Actually make the write function exist
@@ -312,12 +322,21 @@ impl ActionTrait for ExecOptions {
         "Docker Compose does not configuration file. TODO: Use DockerCompose::write to create one",
       )?,
     };
-    cmd.arg("exec").arg("-T").arg(self.service_name.clone());
+    cmd.arg("exec").arg("-T");
+    match &self.user {
+      None => (),
+      Some(user) => {
+        cmd.arg("--user");
+        cmd.arg(&user.clone());
+      }
+    };
+    cmd.arg(self.service_name.clone());
+
+    // And add the command
     cmd.arg(self.command.clone());
     cmd.args(&self.args);
-    log::debug!("cmd:\n{:#?}", cmd);
+    log::debug!("Docker compose is executing a cmd:\n{}", command_str(&cmd)?);
     let result = cmd.arg("").output()?;
-    log::debug!("result:\n{:#?}", result);
     match result.status.success() {
       true => Ok(ActionResult::Exec(
         String::from_utf8(result.stdout)?.trim_end().to_string(),
@@ -328,7 +347,7 @@ impl ActionTrait for ExecOptions {
     }
   }
 
-  fn to_string(&self, _target: Option<AppInstance>) -> Result<String> {
+  fn to_message(&self, target: Option<AppInstance>) -> Result<Vec<Message>> {
     unimplemented!("ActionTrait not implemented for shell")
   }
 }

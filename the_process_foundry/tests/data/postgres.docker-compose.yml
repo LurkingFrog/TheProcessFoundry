@@ -50,8 +50,12 @@ services:
     # user: ${CURRENT_UID}
     environment:
       POSTGRES_PASSWORD: password
-    # POSTGRES_USER: ${USER}
-    # volumes:
+      # POSTGRES_USER: ${USER}
+    volumes:
+      - /home/dfogelson/Foundry/TheProcessFoundry/the_process_foundry/build/backups:/backup
+
+volumes:
+  backup:
     # - ~/Foundry/Panama/installers/taiga/data/postgresql/:/var/lib/postgresql/data
     # - /etc/passwd:/etc/passwd:ro
     # - ~/Foundry/Panama/installers/taiga/build/conf/add_self.sh/:/docker-entrypoint-initdb.d/add_self.sh

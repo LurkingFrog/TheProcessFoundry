@@ -22,7 +22,7 @@ pub mod error;
 
 pub use std::rc::Rc;
 
-use applications::{Bash, DockerCompose, DockerContainer};
+use applications::{Bash, DockerCompose, PgBaseBackup};
 use base::*;
 
 pub fn find(container: Rc<dyn ContainerTrait>, app_name: String) -> Result<AppInstance> {
@@ -31,6 +31,19 @@ pub fn find(container: Rc<dyn ContainerTrait>, app_name: String) -> Result<AppIn
         .find_one(query)
         .context(format!("Could not find {} in bootstrap", app_name))?;
     Ok(instance)
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct VolumeQuery {
+    name: Option<String>,
+    location: Option<String>,
+}
+
+pub fn get_or_create_volume(
+    _compose: Rc<DockerCompose>,
+    _query: VolumeQuery,
+) -> Result<Vec<applications::docker_compose::schema::ServiceVolume>> {
+    unimplemented!()
 }
 
 pub fn bootstrap() -> Result<()> {
@@ -51,17 +64,23 @@ pub fn bootstrap() -> Result<()> {
         )?
         .load("/home/dfogelson/Foundry/TheProcessFoundry/the_process_foundry/tests/data/postgres.docker-compose.yml".to_string())?);
 
+    // TODO: Does the container have a mounted volume named backup? (Only implementing "yes" for now)
+
     // Find postgres container
     let pg_service = find(dc.clone(), "postgres".to_string())?;
     let pg_container = Rc::new(dc.get_container(pg_service.name)?);
 
-    // Find PG Backup on Postgres
-    log::debug!("About to find the pg_backup");
-    let pg_backup = find(pg_container.clone(), "pg_basebackup".to_string())?;
-    log::debug!("pg_backup:\n{:#?}", pg_backup);
+    // TODO: Is the container running? Start if not
 
-    // Get the local filesystem
-    // let fs = fs::FileSystem(bash)
+    // Find PG Backup on Postgres
+    let pg_backup = PgBaseBackup::build(
+        find(pg_container.clone(), "pg_basebackup".to_string())?,
+        Some(pg_container.clone()),
+    )?;
+
+    let options = applications::pg_basebackup::Options::new("/backup".to_string());
+    pg_backup.run(options).context("Could not make a backup")?;
+
     Ok(())
 }
 
