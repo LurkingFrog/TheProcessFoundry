@@ -42,6 +42,7 @@ while true; do
     ./Cargo.toml \
     ./the_process_foundry/Cargo.toml \
     ./the_process_foundry/src \
+    ./the_process_foundry/book \
   )
   FILE_PATH=${EVENT/${modify}/}
   # echo -e "\nReceived event on file: '${FILE_PATH}'"

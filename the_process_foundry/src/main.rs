@@ -88,8 +88,17 @@ fn main() {
     env_logger::init();
     log::info!("Starting to run the Process foundry");
 
+    // Convert "bootstrap" into workflow ()
+    // Change "Bash" to "Shell" with a language type of Bash
+    // Make containers Async
+    // Register each type of container/app factory?
+    // Make instance registry for routing - Container should have "register_known_children" function
+    // Make workflow for postgres backup
+    // Make listeners/emitters
+    // Add router to pass messages (Events/Actions?)
+
     match bootstrap() {
-        Ok(_) => log::info!("Finished running the boostrap without errors"),
+        Ok(_) => log::info!("Finished running the bootstrap without errors"),
         Err(err) => log::error!("Failed to complete bootstrap because of error:\n{}", err),
     }
     log::info!("Finished bootstrapping the foundry")
