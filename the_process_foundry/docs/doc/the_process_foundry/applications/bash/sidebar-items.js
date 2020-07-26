@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["APP_NAME",""],["MODULE_VERSION",""]],"enum":[["Action",""],["ActionResult",""]],"struct":[["Bash",""],["FindAppQuery","Configuration to look up an application in this container TODO: Add a macro to map all the functions to the parent AppQuery"],["RunOptions",""],["RunResult",""]]});

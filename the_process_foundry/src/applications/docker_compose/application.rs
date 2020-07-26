@@ -12,9 +12,9 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use super::schema::*;
+use super::DockerContainer;
 use super::FoundryError;
-use super::{docker_container, DockerContainer};
-use super::{ActionTrait, AppInstance, AppQuery, AppTrait, Cmd, ContainerTrait, Message};
+use super::{ActionTrait, AppInstance, AppQuery, AppTrait, ContainerTrait, Message};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DockerCompose {
@@ -35,7 +35,7 @@ impl AppTrait for DockerCompose {
     }
   }
 
-  fn build(instance: AppInstance, parent: Option<Rc<dyn ContainerTrait>>) -> Result<DockerCompose> {
+  fn new(instance: AppInstance, parent: Option<Rc<dyn ContainerTrait>>) -> Result<DockerCompose> {
     Ok(DockerCompose {
       parent,
       instance: AppInstance {
@@ -47,15 +47,15 @@ impl AppTrait for DockerCompose {
     })
   }
 
-  /// Knows how to get the version number of the instaAppTrait
-  /// Figures out how to call the cli using the given container
-  fn set_cli(
-    &self,
-    _instance: AppInstance,
-    _container: Rc<dyn ContainerTrait>,
-  ) -> Result<AppInstance> {
-    unimplemented!()
-  }
+  // /// Knows how to get the version number of the AppTrait
+  // /// Figures out how to call the cli using the given container
+  // fn set_cli(
+  //   &self,
+  //   _instance: AppInstance,
+  //   _container: Rc<dyn ContainerTrait>,
+  // ) -> Result<AppInstance> {
+  //   unimplemented!()
+  // }
 
   /// Knows how to get the version number of the installed app (not the module version)
   fn set_version(&self, _instance: AppInstance) -> Result<AppInstance> {
@@ -187,7 +187,7 @@ impl DockerCompose {
   /// TODO: If status is "Up", we want to get/set shell
   fn define_container(&self, name: String) -> Result<DockerContainer> {
     let instance = AppInstance::new(name.clone());
-    DockerContainer::build(instance, Some(Rc::new(self.clone())))
+    DockerContainer::new(instance, Some(Rc::new(self.clone())))
   }
 
   /// Set the status of all the services that this instance knows about
@@ -272,7 +272,7 @@ impl ActionTrait for FindApp {
     unimplemented!("Still haven't figured out Actions yet")
   }
 
-  fn to_message(&self, target: Option<AppInstance>) -> Result<Vec<Message>> {
+  fn to_message(&self, _target: Option<AppInstance>) -> Result<Vec<Message>> {
     unimplemented!("ActionTrait not implemented for shell")
   }
 }
@@ -287,7 +287,7 @@ pub struct ExecOptions {
   index: Option<u8>,
   user: Option<String>,
   env: Option<HashMap<String, String>>,
-  workdir: Option<String>,
+  work_dir: Option<String>,
 }
 
 impl ExecOptions {
@@ -347,7 +347,7 @@ impl ActionTrait for ExecOptions {
     }
   }
 
-  fn to_message(&self, target: Option<AppInstance>) -> Result<Vec<Message>> {
+  fn to_message(&self, _target: Option<AppInstance>) -> Result<Vec<Message>> {
     unimplemented!("ActionTrait not implemented for shell")
   }
 }
@@ -398,8 +398,8 @@ pub enum CliActions {
   Stop,
   /// Display the running processes
   Top,
-  /// Unpause services
-  Unpause,
+  /// Un-pause services
+  UnPause,
   /// Create and start containers
   Up,
   /// Show the Docker-Compose version information

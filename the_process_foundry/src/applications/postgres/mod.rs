@@ -1,4 +1,4 @@
-//! Module for manipulating a Postrges server
+//! Module for manipulating a Postgres server
 //!
 //! THINK: What is the scope of this module. Does it include managing the internal data?
 
@@ -40,7 +40,7 @@ impl AppTrait for Postgres {
     self.get_name()
   }
 
-  fn build(instance: AppInstance, _parent: Option<Rc<dyn ContainerTrait>>) -> Result<Postgres> {
+  fn new(instance: AppInstance, _parent: Option<Rc<dyn ContainerTrait>>) -> Result<Postgres> {
     Ok(Postgres {
       instance: AppInstance {
         module_version: Some(Postgres::get_module_version()?),
@@ -53,12 +53,12 @@ impl AppTrait for Postgres {
   fn set_version(&self, _instance: AppInstance) -> Result<AppInstance> {
     unimplemented!()
   }
-  /// Figures out how to call the cli using the given container
-  fn set_cli(
-    &self,
-    _instance: AppInstance,
-    _container: Rc<dyn ContainerTrait>,
-  ) -> Result<AppInstance> {
-    unimplemented!()
-  }
+  // /// Figures out how to call the cli using the given container
+  // fn set_cli(
+  //   &self,
+  //   _instance: AppInstance,
+  //   _container: Rc<dyn ContainerTrait>,
+  // ) -> Result<AppInstance> {
+  //   unimplemented!()
+  // }
 }

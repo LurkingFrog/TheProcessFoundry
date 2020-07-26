@@ -1,0 +1,11 @@
+/home/dfogelson/Foundry/TheProcessFoundry/the_process_foundry/docs/debug/deps/libthiserror_impl-cb7d23c09fad3877.so: /home/dfogelson/.cargo/registry/src/github.com-1ecc6299db9ec823/thiserror-impl-1.0.20/src/lib.rs /home/dfogelson/.cargo/registry/src/github.com-1ecc6299db9ec823/thiserror-impl-1.0.20/src/ast.rs /home/dfogelson/.cargo/registry/src/github.com-1ecc6299db9ec823/thiserror-impl-1.0.20/src/attr.rs /home/dfogelson/.cargo/registry/src/github.com-1ecc6299db9ec823/thiserror-impl-1.0.20/src/expand.rs /home/dfogelson/.cargo/registry/src/github.com-1ecc6299db9ec823/thiserror-impl-1.0.20/src/fmt.rs /home/dfogelson/.cargo/registry/src/github.com-1ecc6299db9ec823/thiserror-impl-1.0.20/src/prop.rs /home/dfogelson/.cargo/registry/src/github.com-1ecc6299db9ec823/thiserror-impl-1.0.20/src/valid.rs
+
+/home/dfogelson/Foundry/TheProcessFoundry/the_process_foundry/docs/debug/deps/thiserror_impl-cb7d23c09fad3877.d: /home/dfogelson/.cargo/registry/src/github.com-1ecc6299db9ec823/thiserror-impl-1.0.20/src/lib.rs /home/dfogelson/.cargo/registry/src/github.com-1ecc6299db9ec823/thiserror-impl-1.0.20/src/ast.rs /home/dfogelson/.cargo/registry/src/github.com-1ecc6299db9ec823/thiserror-impl-1.0.20/src/attr.rs /home/dfogelson/.cargo/registry/src/github.com-1ecc6299db9ec823/thiserror-impl-1.0.20/src/expand.rs /home/dfogelson/.cargo/registry/src/github.com-1ecc6299db9ec823/thiserror-impl-1.0.20/src/fmt.rs /home/dfogelson/.cargo/registry/src/github.com-1ecc6299db9ec823/thiserror-impl-1.0.20/src/prop.rs /home/dfogelson/.cargo/registry/src/github.com-1ecc6299db9ec823/thiserror-impl-1.0.20/src/valid.rs
+
+/home/dfogelson/.cargo/registry/src/github.com-1ecc6299db9ec823/thiserror-impl-1.0.20/src/lib.rs:
+/home/dfogelson/.cargo/registry/src/github.com-1ecc6299db9ec823/thiserror-impl-1.0.20/src/ast.rs:
+/home/dfogelson/.cargo/registry/src/github.com-1ecc6299db9ec823/thiserror-impl-1.0.20/src/attr.rs:
+/home/dfogelson/.cargo/registry/src/github.com-1ecc6299db9ec823/thiserror-impl-1.0.20/src/expand.rs:
+/home/dfogelson/.cargo/registry/src/github.com-1ecc6299db9ec823/thiserror-impl-1.0.20/src/fmt.rs:
+/home/dfogelson/.cargo/registry/src/github.com-1ecc6299db9ec823/thiserror-impl-1.0.20/src/prop.rs:
+/home/dfogelson/.cargo/registry/src/github.com-1ecc6299db9ec823/thiserror-impl-1.0.20/src/valid.rs:

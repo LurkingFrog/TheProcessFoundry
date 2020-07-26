@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["the_process_foundry"] = [{"text":"impl JsonSchema for <a class=\"enum\" href=\"the_process_foundry/applications/docker_compose/application/enum.Event.html\" title=\"enum the_process_foundry::applications::docker_compose::application::Event\">Event</a>","synthetic":false,"types":["the_process_foundry::applications::docker_compose::application::Event"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

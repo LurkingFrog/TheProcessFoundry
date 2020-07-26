@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["the_process_foundry"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/std/error/trait.Error.html\" title=\"trait std::error::Error\">Error</a> for <a class=\"enum\" href=\"the_process_foundry/error/enum.FoundryError.html\" title=\"enum the_process_foundry::error::FoundryError\">FoundryError</a>","synthetic":false,"types":["the_process_foundry::error::FoundryError"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

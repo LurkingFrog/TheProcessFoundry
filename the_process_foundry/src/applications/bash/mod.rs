@@ -1,9 +1,6 @@
 //! Use and manage Bash shell
 //!
 //! This is essentially my hello world application and using it as a stalking horse for finding user stories
-//! THINK: Considering to change this to a generic unix shell with a plugin for specific type (Bash, ZSH),
-//!        since they seem to be common with the differences coming from the scripting and interactive
-//!        portions
 
 const APP_NAME: &str = "Bash";
 const MODULE_VERSION: &'static str = env!("CARGO_PKG_VERSION");
@@ -56,7 +53,7 @@ impl AppTrait for Bash {
     self.get_name()
   }
 
-  fn build(instance: AppInstance, _parent: Option<Rc<dyn ContainerTrait>>) -> Result<Bash> {
+  fn new(instance: AppInstance, _parent: Option<Rc<dyn ContainerTrait>>) -> Result<Bash> {
     Ok(Bash {
       app_cache: HashMap::new(),
       instance: AppInstance {
@@ -70,14 +67,14 @@ impl AppTrait for Bash {
   fn set_version(&self, _instance: AppInstance) -> Result<AppInstance> {
     unimplemented!()
   }
-  /// Figures out how to call the cli using the given container
-  fn set_cli(
-    &self,
-    _instance: AppInstance,
-    _container: Rc<dyn ContainerTrait>,
-  ) -> Result<AppInstance> {
-    unimplemented!()
-  }
+  // /// Figures out how to call the cli using the given container
+  // fn set_cli(
+  //   &self,
+  //   _instance: AppInstance,
+  //   _container: Rc<dyn ContainerTrait>,
+  // ) -> Result<AppInstance> {
+  //   unimplemented!()
+  // }
 }
 
 impl ContainerTrait for Bash {
@@ -97,7 +94,7 @@ impl ContainerTrait for Bash {
     unimplemented!("No App Cache for Bash Yet")
   }
 
-  fn forward(&self, to: AppInstance, message: Message) -> Result<String> {
+  fn forward(&self, _to: AppInstance, _message: Message) -> Result<String> {
     unimplemented!("No ContainerTrait::forward yet")
   }
 

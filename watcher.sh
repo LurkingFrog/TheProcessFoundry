@@ -6,9 +6,9 @@ export RUST_LOG=debug,test=debug;
 # export RUSTFLAGS="-Z macro-backtrace -Z debug-macros"
 
 function rebuild_invoicer {
-  echo "\n\n\n\t\t<---------------------->\n\nBuilding and running the full test\n"
-  cargo run
-  echo "\n\n\n"
+  echo "\n\n\t\t<---------------------->\nBuilding and running the full test\n"
+  cargo run && build_docs
+  echo "\n"
 }
 
 function init {
@@ -18,6 +18,20 @@ function init {
   cargo build
 }
 
+function build_book {
+  echo "\nBuilding the book"
+  cd ./the_process_foundry/book
+  mdbook clean \
+  && mdbook build . \
+  && cp -R ./build/* ~/Foundry/lurkingfrog.github.io/the_process_foundry/book
+  cd ../..
+}
+
+function build_docs {
+  echo "\nBuilding the documentation"
+  cargo doc --no-deps \
+  && cp -R target/doc/* ~/Foundry/lurkingfrog.github.io/the_process_foundry/docs
+}
 
 # Remove all the docker containers before exiting
 function tearDown {
@@ -53,6 +67,9 @@ while true; do
     tearDown
     sleep 1
     exit 0
+
+  elif [[ $FILE_PATH =~ "the_process_foundry/book" ]]; then
+    build_book
 
   elif [[ $FILE_PATH =~ "./Cargo.toml$" ]]; then
     rebuild_invoicer

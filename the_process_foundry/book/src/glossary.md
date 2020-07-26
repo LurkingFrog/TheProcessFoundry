@@ -15,3 +15,6 @@
 - **Long Poller**
 - **System** This is a set of applications that are run together to perform a particular function. A good example is the
   [ELK Stack](./systems/ELK.md).
+- **IPC** Inter-process communication -
+- **Node** A
+- **TPF** The Process Foundry

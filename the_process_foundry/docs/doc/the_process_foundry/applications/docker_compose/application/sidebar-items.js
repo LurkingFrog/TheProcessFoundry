@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["APP_NAME",""],["MODULE_VERSION",""]],"enum":[["Action","The actions registered to the system."],["ActionResult","The responses from the various actions."],["CliActions",""],["Event",""]],"fn":[["command_str",""]],"struct":[["DockerCompose",""],["ExecOptions",""],["FindApp",""]]});

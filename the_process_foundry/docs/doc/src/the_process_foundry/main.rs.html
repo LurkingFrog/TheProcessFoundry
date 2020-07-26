@@ -1,0 +1,221 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `the_process_foundry/src/main.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>main.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="shortcut icon" href="../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../the_process_foundry/index.html'><div class='logo-container'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<span id="2">  2</span>
+<span id="3">  3</span>
+<span id="4">  4</span>
+<span id="5">  5</span>
+<span id="6">  6</span>
+<span id="7">  7</span>
+<span id="8">  8</span>
+<span id="9">  9</span>
+<span id="10"> 10</span>
+<span id="11"> 11</span>
+<span id="12"> 12</span>
+<span id="13"> 13</span>
+<span id="14"> 14</span>
+<span id="15"> 15</span>
+<span id="16"> 16</span>
+<span id="17"> 17</span>
+<span id="18"> 18</span>
+<span id="19"> 19</span>
+<span id="20"> 20</span>
+<span id="21"> 21</span>
+<span id="22"> 22</span>
+<span id="23"> 23</span>
+<span id="24"> 24</span>
+<span id="25"> 25</span>
+<span id="26"> 26</span>
+<span id="27"> 27</span>
+<span id="28"> 28</span>
+<span id="29"> 29</span>
+<span id="30"> 30</span>
+<span id="31"> 31</span>
+<span id="32"> 32</span>
+<span id="33"> 33</span>
+<span id="34"> 34</span>
+<span id="35"> 35</span>
+<span id="36"> 36</span>
+<span id="37"> 37</span>
+<span id="38"> 38</span>
+<span id="39"> 39</span>
+<span id="40"> 40</span>
+<span id="41"> 41</span>
+<span id="42"> 42</span>
+<span id="43"> 43</span>
+<span id="44"> 44</span>
+<span id="45"> 45</span>
+<span id="46"> 46</span>
+<span id="47"> 47</span>
+<span id="48"> 48</span>
+<span id="49"> 49</span>
+<span id="50"> 50</span>
+<span id="51"> 51</span>
+<span id="52"> 52</span>
+<span id="53"> 53</span>
+<span id="54"> 54</span>
+<span id="55"> 55</span>
+<span id="56"> 56</span>
+<span id="57"> 57</span>
+<span id="58"> 58</span>
+<span id="59"> 59</span>
+<span id="60"> 60</span>
+<span id="61"> 61</span>
+<span id="62"> 62</span>
+<span id="63"> 63</span>
+<span id="64"> 64</span>
+<span id="65"> 65</span>
+<span id="66"> 66</span>
+<span id="67"> 67</span>
+<span id="68"> 68</span>
+<span id="69"> 69</span>
+<span id="70"> 70</span>
+<span id="71"> 71</span>
+<span id="72"> 72</span>
+<span id="73"> 73</span>
+<span id="74"> 74</span>
+<span id="75"> 75</span>
+<span id="76"> 76</span>
+<span id="77"> 77</span>
+<span id="78"> 78</span>
+<span id="79"> 79</span>
+<span id="80"> 80</span>
+<span id="81"> 81</span>
+<span id="82"> 82</span>
+<span id="83"> 83</span>
+<span id="84"> 84</span>
+<span id="85"> 85</span>
+<span id="86"> 86</span>
+<span id="87"> 87</span>
+<span id="88"> 88</span>
+<span id="89"> 89</span>
+<span id="90"> 90</span>
+<span id="91"> 91</span>
+<span id="92"> 92</span>
+<span id="93"> 93</span>
+<span id="94"> 94</span>
+<span id="95"> 95</span>
+<span id="96"> 96</span>
+<span id="97"> 97</span>
+<span id="98"> 98</span>
+<span id="99"> 99</span>
+<span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+</pre><div class="example-wrap"><pre class="rust ">
+<span class="doccomment">//! The root library of the Process Foundry</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! This is here to bootstrap and tie the entire system together.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! TODO: Make more of a README for this</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! # Some Definitions</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! ## Application - An item which can run actions and generate events</span>
+<span class="doccomment">//! ## Container - An abstract object which contains applications and other containers. It can be used to look</span>
+<span class="doccomment">//!    its own contents up and pass actions to them.</span>
+<span class="doccomment">//! ## Module - An implementation of an interface to an Application</span>
+<span class="doccomment">//! ## Registry - This a singleton that maintains a searchable list of application and container factories</span>
+<span class="doccomment">//! ## Workflow - A set of Applications wired together to implement a single process</span>
+
+<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">Context</span>, <span class="prelude-ty">Result</span>};
+<span class="kw">use</span> <span class="ident">error</span>::<span class="ident">FoundryError</span>;
+
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">applications</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">base</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">error</span>;
+<span class="comment">// pub mod helpers;</span>
+<span class="comment">// pub mod registry;</span>
+
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">rc</span>::<span class="ident">Rc</span>;
+
+<span class="kw">use</span> <span class="ident">applications</span>::{<span class="ident">Bash</span>, <span class="ident">DockerCompose</span>, <span class="ident">PgBaseBackup</span>};
+
+<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">inline</span>)]</span>
+<span class="kw">use</span> <span class="ident">base</span>::<span class="kw-2">*</span>;
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">find</span>(<span class="ident">container</span>: <span class="ident">Rc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ContainerTrait</span><span class="op">&gt;</span>, <span class="ident">app_name</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AppInstance</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">query</span> <span class="op">=</span> <span class="ident">AppQuery</span>::<span class="ident">new</span>(<span class="ident">app_name</span>.<span class="ident">clone</span>());
+    <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="ident">container</span>
+        .<span class="ident">find_one</span>(<span class="ident">query</span>)
+        .<span class="ident">context</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Could not find {} in bootstrap&quot;</span>, <span class="ident">app_name</span>))<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(<span class="ident">instance</span>)
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Default</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">VolumeQuery</span> {
+    <span class="ident">name</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="ident">location</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_or_create_volume</span>(
+    <span class="ident">_compose</span>: <span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DockerCompose</span><span class="op">&gt;</span>,
+    <span class="ident">_query</span>: <span class="ident">VolumeQuery</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">applications</span>::<span class="ident">docker_compose</span>::<span class="ident">schema</span>::<span class="ident">ServiceVolume</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="macro">unimplemented</span><span class="macro">!</span>()
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">bootstrap</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="comment">// Get the local bash shell</span>
+    <span class="kw">let</span> <span class="ident">shell</span> <span class="op">=</span> <span class="ident">base</span>::<span class="ident">Shell</span>::<span class="ident">get_local_shell</span>()
+        .<span class="ident">context</span>(<span class="string">&quot;Oh noes, my bootstrap failed to get a local shell&quot;</span>)<span class="question-mark">?</span>;
+
+    <span class="kw">let</span> <span class="ident">bash</span> <span class="op">=</span> <span class="ident">Rc</span>::<span class="ident">new</span>(
+        <span class="ident">Bash</span>::<span class="ident">build</span>(<span class="ident">shell</span>.<span class="ident">instance</span>.<span class="ident">clone</span>(), <span class="prelude-val">None</span>)
+            .<span class="ident">context</span>(<span class="string">&quot;Building bash from the local shell didn&#39;t work&quot;</span>)<span class="question-mark">?</span>,
+    );
+
+    <span class="comment">// Find Docker Compose using local bash and load the test compose file</span>
+    <span class="kw">let</span> <span class="ident">dc</span> <span class="op">=</span> <span class="ident">Rc</span>::<span class="ident">new</span>(
+        <span class="ident">DockerCompose</span>::<span class="ident">build</span>(
+            <span class="ident">find</span>(<span class="ident">bash</span>.<span class="ident">clone</span>(), <span class="string">&quot;docker-compose&quot;</span>.<span class="ident">to_string</span>())<span class="question-mark">?</span>,
+            <span class="prelude-val">Some</span>(<span class="ident">bash</span>.<span class="ident">clone</span>())
+        )<span class="question-mark">?</span>
+        .<span class="ident">load</span>(<span class="string">&quot;/home/dfogelson/Foundry/TheProcessFoundry/the_process_foundry/tests/data/postgres.docker-compose.yml&quot;</span>.<span class="ident">to_string</span>())<span class="question-mark">?</span>);
+
+    <span class="comment">// TODO: Does the container have a mounted volume named backup? (Only implementing &quot;yes&quot; for now)</span>
+
+    <span class="comment">// Find postgres container</span>
+    <span class="kw">let</span> <span class="ident">pg_service</span> <span class="op">=</span> <span class="ident">find</span>(<span class="ident">dc</span>.<span class="ident">clone</span>(), <span class="string">&quot;postgres&quot;</span>.<span class="ident">to_string</span>())<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">pg_container</span> <span class="op">=</span> <span class="ident">Rc</span>::<span class="ident">new</span>(<span class="ident">dc</span>.<span class="ident">get_container</span>(<span class="ident">pg_service</span>.<span class="ident">name</span>)<span class="question-mark">?</span>);
+
+    <span class="comment">// TODO: Is the container running? Start if not</span>
+
+    <span class="comment">// Find PG Backup on Postgres</span>
+    <span class="kw">let</span> <span class="ident">pg_backup</span> <span class="op">=</span> <span class="ident">PgBaseBackup</span>::<span class="ident">build</span>(
+        <span class="ident">find</span>(<span class="ident">pg_container</span>.<span class="ident">clone</span>(), <span class="string">&quot;pg_basebackup&quot;</span>.<span class="ident">to_string</span>())<span class="question-mark">?</span>,
+        <span class="prelude-val">Some</span>(<span class="ident">pg_container</span>.<span class="ident">clone</span>()),
+    )<span class="question-mark">?</span>;
+
+    <span class="kw">let</span> <span class="ident">options</span> <span class="op">=</span> <span class="ident">applications</span>::<span class="ident">pg_basebackup</span>::<span class="ident">Options</span>::<span class="ident">new</span>(<span class="string">&quot;/backup&quot;</span>.<span class="ident">to_string</span>());
+    <span class="ident">pg_backup</span>.<span class="ident">run</span>(<span class="ident">options</span>).<span class="ident">context</span>(<span class="string">&quot;Could not make a backup&quot;</span>)<span class="question-mark">?</span>;
+
+    <span class="prelude-val">Ok</span>(())
+}
+
+<span class="kw">fn</span> <span class="ident">main</span>() {
+    <span class="ident">env_logger</span>::<span class="ident">init</span>();
+    <span class="ident">log</span>::<span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Starting to run the Process foundry&quot;</span>);
+
+    <span class="comment">// Convert &quot;bootstrap&quot; into workflow ()</span>
+    <span class="comment">// Change &quot;Bash&quot; to &quot;Shell&quot; with a language type of Bash</span>
+    <span class="comment">// Make containers Async</span>
+    <span class="comment">// Register each type of container/app factory?</span>
+    <span class="comment">// Make instance registry for routing - Container should have &quot;register_known_children&quot; function</span>
+    <span class="comment">// Make workflow for postgres backup</span>
+    <span class="comment">// Make listeners/emitters</span>
+    <span class="comment">// Add router to pass messages (Events/Actions?)</span>
+
+    <span class="kw">match</span> <span class="ident">bootstrap</span>() {
+        <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">log</span>::<span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Finished running the bootstrap without errors&quot;</span>),
+        <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">log</span>::<span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Failed to complete bootstrap because of error:\n{}&quot;</span>, <span class="ident">err</span>),
+    }
+    <span class="ident">log</span>::<span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Finished bootstrapping the foundry&quot;</span>)
+}
+</pre></div>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "the_process_foundry";</script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

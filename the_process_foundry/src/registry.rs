@@ -1,5 +1,6 @@
 //! The lookup registry for the Rust Objects doing the work
 //!
+//! THINK: https://github.com/jonhoo/rust-evmap
 
 use anyhow::{Context, Result};
 use serde_derive::{Deserialize, Serialize};
@@ -10,7 +11,7 @@ use super::FoundryError;
 /// This is the base index of the full system.
 ///
 /// Main TODOs:
-/// - Convert the keys from keys to Uuids
+/// - Convert the keys from String to Uuid
 ///
 /// Additional features to come after the initial use case (Backup Postgres) works.
 /// - Locking/Mutex on specific actions
@@ -27,7 +28,7 @@ impl std::fmt::Display for Registry {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     write!(
       f,
-      "Registry has {} factories loaded, allowing {} types of action and producting {} types of event",
+      "Registry has {} factories loaded, allowing {} types of action and producing {} types of event",
       self.factories.keys().len(), self.actions.keys().len(), self.events.keys().len()
     )
   }
@@ -54,7 +55,7 @@ impl Registry {
     Ok(())
   }
 
-  /// Find all the applications avaliable that match the given definition
+  /// Find all the applications available that match the given definition
   /// TODO: this needs to be much more granular than just name
   pub fn find(&self, def: &AppDefinition) -> Result<Vec<&Box<dyn FactoryTrait>>> {
     match self.factories.get(&def.name) {
@@ -71,7 +72,7 @@ pub trait FactoryTrait {
   fn get_definition(&self) -> Result<AppDefinition>;
 
   /// Construct an instance of the app module based on the container it is in
-  fn build(&self, definition: AppDefinition) -> Result<Box<dyn AppTrait>>;
+  fn new(&self, definition: AppDefinition) -> Result<Box<dyn AppTrait>>;
 }
 
 /// Most items act as both an App and a Container, depending upon the context. Each will need

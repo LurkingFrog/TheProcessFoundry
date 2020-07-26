@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["application","Docker-Compose functionality"],["schema","Schema for a docker-compose configuration file"]]});

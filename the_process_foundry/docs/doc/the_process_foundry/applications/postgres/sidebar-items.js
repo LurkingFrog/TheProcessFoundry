@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["APP_NAME",""],["MODULE_VERSION",""]],"struct":[["Postgres",""]]});

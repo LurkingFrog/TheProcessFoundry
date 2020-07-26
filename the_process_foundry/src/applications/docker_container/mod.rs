@@ -74,7 +74,7 @@ impl DockerContainer {
     }
 
     // HACK: Still trying to get my head around this special case
-    let shell = Rc::new(Bash::build(AppInstance::new("bash".to_string()), None)?);
+    let shell = Rc::new(Bash::new(AppInstance::new("bash".to_string()), None)?);
 
     Ok(DockerContainer {
       shell: Some(shell),
@@ -104,10 +104,7 @@ impl AppTrait for DockerContainer {
     self.get_name()
   }
 
-  fn build(
-    instance: AppInstance,
-    parent: Option<Rc<dyn ContainerTrait>>,
-  ) -> Result<DockerContainer> {
+  fn new(instance: AppInstance, parent: Option<Rc<dyn ContainerTrait>>) -> Result<DockerContainer> {
     let base = DockerContainer {
       status: Status::Down,
       instance: AppInstance {
@@ -120,18 +117,18 @@ impl AppTrait for DockerContainer {
     base.set_shell(None)
   }
 
-  /// Knows how to get the version number of the installed app (not the module version)
-  fn set_version(&self, _instance: AppInstance) -> Result<AppInstance> {
-    unimplemented!()
-  }
-  /// Figures out how to call the cli using the given container
-  fn set_cli(
-    &self,
-    _instance: AppInstance,
-    _container: Rc<dyn ContainerTrait>,
-  ) -> Result<AppInstance> {
-    unimplemented!()
-  }
+  // /// Knows how to get the version number of the installed app (not the module version)
+  // fn set_version(&self, _instance: AppInstance) -> Result<AppInstance> {
+  //   unimplemented!()
+  // }
+  // /// Figures out how to call the cli using the given container
+  // fn set_cli(
+  //   &self,
+  //   _instance: AppInstance,
+  //   _container: Rc<dyn ContainerTrait>,
+  // ) -> Result<AppInstance> {
+  //   unimplemented!()
+  // }
 }
 
 impl ContainerTrait for DockerContainer {
@@ -233,7 +230,7 @@ pub enum ActionResult {
 }
 
 impl Action {
-  fn _run(&self, container: DockerContainer) -> Result<ActionResult> {
+  fn _run(&self, _container: DockerContainer) -> Result<ActionResult> {
     // We shouldn't be able to run anything without a valid configuration
     // let conf = match &compose.config {
     //   Some(conf) => conf,
@@ -263,7 +260,7 @@ impl ActionTrait for FindApp {
     unimplemented!()
   }
 
-  fn to_message(&self, target: Option<AppInstance>) -> Result<Vec<Message>> {
+  fn to_message(&self, _target: Option<AppInstance>) -> Result<Vec<Message>> {
     unimplemented!("ActionTrait not implemented for shell")
   }
 }
@@ -278,7 +275,7 @@ impl ActionTrait for InspectOptions {
     unimplemented!()
   }
 
-  fn to_message(&self, target: Option<AppInstance>) -> Result<Vec<Message>> {
+  fn to_message(&self, _target: Option<AppInstance>) -> Result<Vec<Message>> {
     unimplemented!("ActionTrait not implemented for shell")
   }
 }

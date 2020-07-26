@@ -18,6 +18,15 @@ pub struct PgBaseBackup {
 }
 
 impl PgBaseBackup {
+  fn get_module_version() -> Result<semver::Version> {
+    Ok({
+      semver::Version::parse(MODULE_VERSION).context(format!(
+        "{} has an invalid version number '{}' Cargo.toml",
+        APP_NAME, MODULE_VERSION
+      ))
+    }?)
+  }
+
   // TODO: Convert this to async. Spawn the run function off so it can throw events.
   pub fn run(&self, opts: Options) -> Result<String> {
     log::debug!("Running PgBaseBackup - saving to {:#?}", opts.pgdata);
@@ -38,7 +47,7 @@ impl AppTrait for PgBaseBackup {
     }
   }
 
-  fn build(instance: AppInstance, parent: Option<Rc<dyn ContainerTrait>>) -> Result<PgBaseBackup> {
+  fn new(instance: AppInstance, parent: Option<Rc<dyn ContainerTrait>>) -> Result<PgBaseBackup> {
     let container: Rc<dyn ContainerTrait> = match parent {
       Some(x) => x,
       None => {
@@ -47,7 +56,10 @@ impl AppTrait for PgBaseBackup {
       }
     };
     Ok(PgBaseBackup {
-      instance: instance.clone(),
+      instance: AppInstance {
+        module_version: Some(PgBaseBackup::get_module_version()?),
+        ..instance.clone()
+      },
       parent: container.clone(),
     })
   }
@@ -56,14 +68,14 @@ impl AppTrait for PgBaseBackup {
   fn set_version(&self, _instance: AppInstance) -> Result<AppInstance> {
     unimplemented!()
   }
-  /// Figures out how to call the cli using the given container
-  fn set_cli(
-    &self,
-    _instance: AppInstance,
-    _container: Rc<dyn ContainerTrait>,
-  ) -> Result<AppInstance> {
-    unimplemented!()
-  }
+  // /// Figures out how to call the cli using the given container
+  // fn set_cli(
+  //   &self,
+  //   _instance: AppInstance,
+  //   _container: Rc<dyn ContainerTrait>,
+  // ) -> Result<AppInstance> {
+  //   unimplemented!()
+  // }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -104,7 +116,7 @@ pub struct Options {
   write_recovery_conf: bool,
 
   ///  -T, --tablespace-mapping=OLDDIR=NEWDIR
-  ///                         relocate tablespace in OLDDIR to NEWDIR
+  ///                         relocate table-space in OLD-DIR to NEW-DIR
   tablespace_mapping: Option<String>,
 
   ///      --waldir=WALDIR    location for the write-ahead log directory
@@ -120,7 +132,7 @@ pub struct Options {
   compression: Option<Compression>,
 
   // General options:
-  ///  -c, --checkpoint=fast|spread   set fast or spread checkpointing
+  ///  -c, --checkpoint=fast|spread   set fast or spread check-pointing
   checkpoint: Option<Checkpoint>,
 
   ///  -C, --create-slot      create replication slot
@@ -138,7 +150,7 @@ pub struct Options {
   ///  -P, --progress         show progress information
   progress: bool,
 
-  ///  -S, --slot=SLOTNAME    replication slot to use
+  ///  -S, --slot=<SlotName>    replication slot to use
   slot: Option<String>,
 
   ///  -v, --verbose          output verbose messages
@@ -155,7 +167,7 @@ pub struct Options {
 
   // TODO: This should be in the postgres instance. Current target is local, so I'm leaving it for later
   ///Connection options:
-  ///  -d, --dbname=CONNSTR   connection string
+  ///  -d, --dbname=<ConnStr>   connection string
 
   ///  -h, --host=HOSTNAME    database server host or socket directory
 
